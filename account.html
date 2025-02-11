@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Signup & Signin - Online Store</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+  <style>
+    .navbar {
+      margin-bottom: 50px;
+      border-radius: 0;
+    }
+    
+    .jumbotron {
+      margin-bottom: 0;
+    }
+
+    .container {
+      margin-bottom: 80px; /* Added extra space before footer */
+    }
+   
+    footer {
+      background-color: #f2f2f2;
+      padding: 25px;
+      position: relative;
+      bottom: 0;
+      width: 100%;
+    }
+
+    .auth-container {
+      max-width: 400px;
+      margin: 0 auto;
+      padding: 30px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+  </style>
+
+</head>
+<body>
+
+<div class="jumbotron">
+  <div class="container text-center">
+    <h1>Online Store</h1>      
+    <p>Sign up or log in to access exclusive deals!</p>
+  </div>
+</div>
+
+<nav class="navbar navbar-inverse">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>                        
+      </button>
+      <a class="navbar-brand" href="#">Logo</a>
+    </div>
+    <div class="collapse navbar-collapse" id="myNavbar">
+      <ul class="nav navbar-nav">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="#">Products</a></li>
+        <li><a href="#">Deals</a></li>
+        <li><a href="#">Stores</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li class="active"><a href="#"><span class="glyphicon glyphicon-user"></span> Sign Up / Login</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="auth-container">
+    <ul class="nav nav-tabs">
+      <li class="active"><a data-toggle="tab" href="#signup">Sign Up</a></li>
+      <li><a data-toggle="tab" href="#signin">Sign In</a></li>
+    </ul>
+
+    <div class="tab-content">
+      <!-- Signup Tab -->
+      <div id="signup" class="tab-pane fade in active">
+        <h2 class="text-center">Create an Account</h2>
+        <form>
+          <div class="form-group">
+            <label for="signup-name">Full Name:</label>
+            <input type="text" class="form-control" id="signup-name" placeholder="Enter full name">
+          </div>
+          <div class="form-group">
+            <label for="signup-email">Email Address:</label>
+            <input type="email" class="form-control" id="signup-email" placeholder="Enter email">
+          </div>
+          <div class="form-group">
+            <label for="signup-password">Password:</label>
+            <input type="password" class="form-control" id="signup-password" placeholder="Enter password">
+          </div>
+          <button type="button" class="btn btn-primary btn-block" onclick="handleRegistration(event)">Sign Up</button>
+        </form>
+      </div>
+
+      <!-- Signin Tab -->
+      <div id="signin" class="tab-pane fade">
+        <h2 class="text-center">Sign In</h2>
+        <form>
+          <div class="form-group">
+            <label for="signin-email">Email Address:</label>
+            <input type="email" class="form-control" id="signin-email" placeholder="Enter email">
+          </div>
+          <div class="form-group">
+            <label for="signin-password">Password:</label>
+            <input type="password" class="form-control" id="signin-password" placeholder="Enter password">
+          </div>
+          <button type="submit" class="btn btn-success btn-block">Sign In</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="container-fluid text-center">
+  <p>Online Store Copyright</p>  
+</footer>
+<script src="./static/index.js"></script>
+</body>
+</html>
