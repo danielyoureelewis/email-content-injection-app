@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Cart</title>
+    <script>
+        async function loadCart() {
+            const response = await fetch("/cart");
+            const data = await response.json();
+            
+            const cartContainer = document.getElementById("cart-items");
+            cartContainer.innerHTML = ""; // Clear existing items
+            
+            if (response.status === 200) {
+                data.cart.forEach(item => {
+                    const li = document.createElement("li");
+                    li.textContent = item;
+                    cartContainer.appendChild(li);
+                });
+            } else {
+                cartContainer.innerHTML = "<p>" + data + "</p>";
+            }
+        }
+
+        window.onload = loadCart;
+    </script>
+</head>
+<body>
+    <h1>Your Shopping Cart</h1>
+    <ul id="cart-items">
+        <p>Loading...</p>
+    </ul>
+    <a href="/">Back to Home</a>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Email Viewer</title>
+    <script>
+        function loadEmail(filename) {
+            fetch(`/get_email?filename=${filename}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("email-subject").innerText = data.subject;
+                document.getElementById("email-from").innerText = "From: " + data.from;
+                document.getElementById("email-to").innerText = "To: " + data.to;
+                document.getElementById("email-date").innerText = "Date: " + data.date;
+                document.getElementById("email-body").innerHTML = data.body;
+            })
+            .catch(error => console.error("Error loading email:", error));
+        }
+    </script>
+</head>
+<body>
+
+    <h1>Email Viewer</h1>
+    <div>
+        <h2>Emails:</h2>
+        <ul id="email-list">
+            {% for email in emails %}
+                <li><a href="#" onclick="loadEmail('{{ email }}')">{{ email }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <hr>
+
+    <div>
+        <h2 id="email-subject">Select an email</h2>
+        <p id="email-from"></p>
+        <p id="email-to"></p>
+        <p id="email-date"></p>
+        <div id="email-body"></div>
+    </div>
+
+</body>
+</html>

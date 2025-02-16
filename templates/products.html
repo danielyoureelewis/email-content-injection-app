@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products - Online Store</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <style>
+        .product-card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .product-card img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .product-card h4 {
+            margin-top: 10px;
+        }
+
+        .product-card .price {
+            font-size: 18px;
+            color: green;
+        }
+
+        .navbar {
+            margin-bottom: 50px;
+            border-radius: 0;
+        }
+
+        .jumbotron {
+            margin-bottom: 0;
+        }
+
+        .container {
+            margin-bottom: 80px;
+            /* Added extra space before footer */
+        }
+
+        footer {
+            background-color: #f2f2f2;
+            padding: 25px;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .auth-container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 30px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+                /* Remove the navbar's default rounded borders and increase the bottom margin */
+                .navbar {
+            margin-bottom: 50px;
+            border-radius: 0;
+        }
+
+        /* Remove the jumbotron's default bottom margin */
+        .jumbotron {
+            margin-bottom: 0;
+        }
+
+        /* Add a gray background color and some padding to the footer */
+        footer {
+            background-color: #f2f2f2;
+            padding: 25px;
+        }
+
+        .modal-body {
+            max-height: 75vh;
+            overflow-y: auto;
+        }
+
+        /* Increase modal height */
+        .modal-dialog {
+            height: 90vh;
+            /* 90% of the viewport height */
+            width: 80vw;
+            /* 80% of the viewport width */
+            max-width: 900px;
+            /* Limit max width */
+            display: flex;
+            align-items: center;
+        }
+
+        /* Ensure modal content fills the dialog */
+        .modal-content {
+            height: 85vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Make the modal body scrollable */
+        .modal-body {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .feedback-btn {
+            width: 100px;
+            /* Standard width */
+            text-align: center;
+            font-weight: bold;
+            border: 2px solid transparent;
+            /* Default border */
+        }
+
+        /* Add border to selected button */
+        .feedback-btn.active {
+            border: 2px solid red !important;
+        }
+
+        /* Ensure radios are hidden */
+        .btn-group label input[type="radio"] {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-inverse">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="#">Logo</a>
+            </div>
+            <div class="collapse navbar-collapse" id="myNavbar">
+                <ul class="nav navbar-nav">
+                    <li><a href="/">Home</a></li>
+                    <li class="active"><a href="/products">Products</a></li>
+                    <li><a href="#">Deals</a></li>
+                    <li><a href="#">Stores</a></li>
+                    <li><a href="#">Contact</a></li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="" onclick=support(e) data-toggle="modal" data-target="#exampleModalCenter"><span
+                                class="glyphicon glyphicon glyphicon-wrench"></span>Support</a></li>
+                    <!-- Added Support Button -->
+                    <!-- Button trigger modal -->
+
+                    <!-- Modal -->
+                    <div class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog"
+                        aria-labelledby="exampleModalCenterTitle" aria-hidden="true" style="min-height:100%">
+                        <div class="modal-dialog modal-dialog-centered modal-tall" role="document">
+                            <div id="m" class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="exampleModalLongTitle">How are we doing?</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+
+                                <nav class="navbar navbar-inverse">
+                                    <div class="container-fluid">
+                                        <div class="navbar-header">
+                                            <button type="button" class="navbar-toggle" data-toggle="collapse"
+                                                data-target="#feedbackNavbar">
+                                                <span class="icon-bar"></span>
+                                                <span class="icon-bar"></span>
+                                                <span class="icon-bar"></span>
+                                            </button>
+                                        </div>
+                                        <div class="collapse navbar-collapse" id="feedbackNavbar">
+                                            <ul class="nav navbar-nav">
+                                                <li class="navbar-text">How was your experience?</li>
+                                            </ul>
+                                            <form class="navbar-form navbar-left">
+                                                <div class="btn-group" data-toggle="buttons">
+                                                    <label class="btn btn-danger feedback-btn">
+                                                        <input type="radio" name="feedback" value="very-bad"> Very Bad
+                                                    </label>
+                                                    <label class="btn btn-warning feedback-btn">
+                                                        <input type="radio" name="feedback" value="bad"> Bad
+                                                    </label>
+                                                    <label class="btn btn-default feedback-btn">
+                                                        <input type="radio" name="feedback" value="ok"> Ok
+                                                    </label>
+                                                    <label class="btn btn-info feedback-btn">
+                                                        <input type="radio" name="feedback" value="good"> Good
+                                                    </label>
+                                                    <label class="btn btn-success feedback-btn">
+                                                        <input type="radio" name="feedback" value="great"> Great
+                                                    </label>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </nav>
+
+
+                                <div class="modal-body">
+                                    <textarea id="support-body" style="width:100%;height:100%"
+                                        placeholder="This is the default text"></textarea>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-primary" onclick=support(event)>Send
+                                        Report</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <li><a href="/account"><span class="glyphicon glyphicon-user"></span> Your Account</a></li>
+                    <li><a href="#"><span class="glyphicon glyphicon-shopping-cart"></span> Cart</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2 class="text-center">Our Products</h2>
+        <div class="row">
+            <div class="col-sm-4">
+                <div class="product-card">
+                    <img src="./static/assets/images/products/horrific_teapot.webp" alt="Product 1">
+                    <h4>Product 1</h4>
+                    <p class="price">$19.99</p>
+                    <button class="btn btn-primary">Add to Cart</button>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="product-card">
+                    <img src="./static/assets/images/products/AI_teapot.webp" alt="Product 2">
+                    <h4>Product 2</h4>
+                    <p class="price">$24.99</p>
+                    <button class="btn btn-primary">Add to Cart</button>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="product-card">
+                    <img src="./static/assets/images/products/horrific_teapot.webp" alt="Product 3">
+                    <h4>Product 3</h4>
+                    <p class="price">$29.99</p>
+                    <button class="btn btn-primary">Add to Cart</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="container-fluid text-center">
+        <p>&copy; 2025 Online Store</p>
+    </footer>
+</body>
+
+</html>
