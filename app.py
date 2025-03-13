@@ -185,7 +185,7 @@ def signin():
             session["token"] = generateOTP()
             session["level"] = 0
             
-            body = f"Hello, {username} Your token is {session["token"]}"
+            body = f"Hello, {username} Your token is {session['token']}"
             create_eml_file("noreply@online.store", email, "online.store Login Token", body, filename="MFA.eml")
             return jsonify({"successful":"200"})
         else:
@@ -263,6 +263,56 @@ def mfa():
         return jsonify({"successful":"200"})
     else:
         return jsonify({"unsuccessful":"200"})
+
+@app.route("/forgot_password", methods=["POST"])
+def forgot_password():
+    data = request.get_json()
+    email = data["email"]
+
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, username FROM users WHERE email = ?", (email,))
+        user = cursor.fetchone()
+
+    if user:
+        user_id = user[0]
+        username = user[1]
+        reset_code = generateOTP()
+        
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE users SET verification_code = ? WHERE id = ?", (reset_code, user_id))
+            conn.commit()
+
+        body = f"Hello, {username}. Use the following code to reset your password: {reset_code}"
+        create_eml_file("noreply@online.store", email, "Password Reset Request", body, filename="forgot_password.eml")
+        return jsonify({"message": "Password reset email sent."})
+    else:
+        return jsonify({"error": "Email not found."}), 404
+
+@app.route("/reset_password", methods=["POST"])
+def reset_password():
+    data = request.get_json()
+    email = data["email"]
+    reset_code = data["reset_code"]
+    new_password = data["new_password"]
+
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM users WHERE email = ? AND verification_code = ?", (email, reset_code))
+        user = cursor.fetchone()
+
+    if user:
+        user_id = user[0]
+        
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE users SET password = ?, verification_code = '' WHERE id = ?", (new_password, user_id))
+            conn.commit()
+
+        return jsonify({"message": "Password reset successful."})
+    else:
+        return jsonify({"error": "Invalid reset code or email."}), 400
 
 if __name__ == "__main__":
     

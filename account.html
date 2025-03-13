@@ -212,7 +212,6 @@
   </nav>
 
   <div class="container">
-    
     <div class="auth-container">
       <div id="mfa" hidden>
         <h2 class="text-center">MFA</h2>
@@ -224,10 +223,13 @@
           <button type="button" class="btn btn-success btn-block" onclick="handleMFA(event)">Sign In</button>
         </form>
       </div>
+
       <div id="authinputs-1">
+        <ul class="nav nav-tabs"></ul>
       <ul class="nav nav-tabs" >
         <li class="active"><a data-toggle="tab" href="#signup">Sign Up</a></li>
         <li><a data-toggle="tab" href="#signin">Sign In</a></li>
+        <li><a data-toggle="tab" href="#forgot-password">Forgot Password</a></li>
       </ul>
 
       <div class="tab-content">
@@ -267,6 +269,17 @@
           </form>
         </div>
 
+        <!-- Forgot Password Tab -->
+        <div id="forgot-password" class="tab-pane fade">
+          <h2 class="text-center">Forgot Password</h2>
+          <form>
+            <div class="form-group">
+              <label for="forgot-password-email">Email Address:</label>
+              <input type="email" class="form-control" id="forgot-password-email" placeholder="Enter email">
+            </div>
+            <button type="button" class="btn btn-warning btn-block" onclick="handleForgotPassword(event)">Reset Password</button>
+          </form>
+        </div>
 
       </div>
     </div>

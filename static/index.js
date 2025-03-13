@@ -170,3 +170,33 @@ function support(e) {
       });
   }
 }
+
+// Handles forgot password functionality
+function handleForgotPassword(e) {
+  console.log(e);
+  e.preventDefault();
+
+  let email = document.getElementById('forgot-password-email').value;
+  console.log(email);
+
+  if (email.includes('@')) {
+    fetch('/forgot-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email
+      })
+    })
+      .then(response => response.json())
+      .then(data => {
+        // Handle the response data
+        console.log("Password reset email sent successfully:", data);
+      })
+      .catch(error => {
+        // Handle errors
+        console.error("Error sending password reset email:", error);
+      });
+  }
+}
