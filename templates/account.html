@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Signup & Signin - Tenticle and Throw</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="/static/css/index.css">
+  <style>
+   
+  </style>
+
+</head>
+
+<body>
+<main>
+  {% include '_navbar.html' %}
+
+  <div class="container">
+    <div class="auth-container">
+      <div id="mfa" hidden>
+        <h2 class="text-center">MFA</h2>
+        <form>
+          <div class="form-group">
+            <label for="signin-MFA">MFA</label>
+            <input type="token" class="form-control" id="signin-MFA" placeholder="Token">
+          </div>
+          <button type="button" class="btn btn-success btn-block" onclick="handleMFA(event)">Sign In</button>
+        </form>
+      </div>
+
+      <div id="authinputs-1">
+        <ul class="nav nav-tabs"></ul>
+      <ul class="nav nav-tabs" >
+        <li class="active"><a data-toggle="tab" href="#signup">Sign Up</a></li>
+        <li><a data-toggle="tab" href="#signin">Sign In</a></li>
+        <li><a data-toggle="tab" href="#forgot-password">Forgot Password</a></li>
+      </ul>
+
+      <div class="tab-content">
+        <!-- Signup Tab -->
+        <div id="signup" class="tab-pane fade in active">
+          <div id="signup-alert-container" class="mt-3"></div>
+          <h2 class="text-center">Create an Account</h2>
+          <form>
+            <div class="form-group">
+              <label for="signup-name">Username:</label>
+              <input type="text" class="form-control" id="signup-name" placeholder="Enter full name">
+            </div>
+            <div class="form-group">
+              <label for="signup-email">Email Address:</label>
+              <input type="email" class="form-control" id="signup-email" placeholder="Enter email">
+            </div>
+            <div class="form-group">
+              <label for="signup-password">Password:</label>
+              <input type="password" class="form-control" id="signup-password" placeholder="Enter password">
+            </div>
+            <button type="button" class="btn btn-primary btn-block" onclick="handleRegistration(event)">Sign Up</button>
+          </form>
+        </div>
+
+        <!-- Signin Tab -->
+        <div id="signin" class="tab-pane fade">
+          <div id="signin-alert-container" class="mt-3"></div>
+          <h2 class="text-center">Sign In</h2>
+          <form>
+            <div class="form-group">
+              <label for="signin-email">Username:</label>
+              <input type="email" class="form-control" id="signin-name" placeholder="Enter email">
+            </div>
+            <div class="form-group">
+              <label for="signin-password">Password:</label>
+              <input type="password" class="form-control" id="signin-password" placeholder="Enter password">
+            </div>
+            <button type="button" class="btn btn-success btn-block" onclick="handleSignIn(event)">Sign In</button>
+          </form>
+        </div>
+
+        <!-- Forgot Password Tab -->
+        <div id="forgot-password" class="tab-pane fade">
+          <div id="forgot-password-alert-container" class="mt-3"></div>
+          <h2 class="text-center">Forgot Password</h2>
+          <form>
+            <div class="form-group">
+              <label for="forgot-password-email">Email Address:</label>
+              <input type="email" class="form-control" id="forgot-password-email" placeholder="Enter email">
+            </div>
+            <button type="button" class="btn btn-warning btn-block" onclick="handleForgotPassword(event)">Reset Password</button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+    </div>
+    
+  </div>
+</main>
+<footer class="container-fluid text-center">
+  <p>Tenticle and Throw Copyright</p>
+  <div class="container mt-4">
+      <form class="inline-form">
+          <label for="signUpEmail" class="mb-0">Signup to our newsletter to recieve exclusive deals!</label>
+          <input id="signUpEmail" type="email" class="form-control" placeholder="Email Address">
+          <button type="button" class="btn btn-danger" onclick="handleSignUP(event)">Sign Up</button>
+      </form>
+  </div>
+  <script src="./static/index.js"></script>
+</body>
+
+</html>

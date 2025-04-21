@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{{ product.name }} - Tenticle and Throw</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/index.css">
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet">
+    <style>
+        .product-container {
+            margin-top: 40px;
+        }
+
+        .product-image {
+            width: 100%;
+            border-radius: 10px;
+        }
+
+        .action-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        @keyframes summonFromTheVoid {
+            0% {
+                transform: scale(0.6) rotate(-5deg);
+                opacity: 0;
+                filter: blur(4px);
+            }
+
+            50% {
+                transform: scale(1.05) rotate(1deg);
+                opacity: 1;
+                filter: blur(0);
+            }
+
+            100% {
+                transform: scale(1) rotate(0deg);
+            }
+        }
+        @keyframes vanishToTheAbyss {
+            from {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            to {
+                opacity: 0;
+                transform: scale(0.8);
+                filter: blur(3px);
+            }
+        }
+
+        .eldritch-notification.hide {
+            animation: vanishToTheAbyss 0.5s ease-in forwards;
+        }
+        
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    {% include '_navbar.html' %}
+    <div id="cart-notification" class="eldritch-notification">
+        <p id="cart-notification-text"></p>
+    </div>
+
+    <div id="cart-notification"
+        style="display:none; position:fixed; top:20px; right:20px; background-color:#333; color:white; padding:15px 20px; border-radius:8px; z-index:1000; box-shadow: 0 0 10px rgba(0,0,0,0.3);">
+    </div>
+
+    <div class="container product-container">
+        <div class="row">
+            <div class="col-sm-6">
+                <img src="{{ product.image }}" alt="{{ product.name }}" class="product-image">
+            </div>
+            <div class="col-sm-6">
+                <h2>{{ product.name }}</h2>
+                <p><strong>Price:</strong> ${{ product.price }}</p>
+                <p>{{ product.description }}</p>
+
+                <div class="action-buttons">
+                    <button class="btn btn-success" onclick="addToCart(event, {{ product.id }})"
+                        aria-label="Add {{ product.name }} to cart">Add to Cart</button>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/index.js"></script>
+</body>
+
+</html>
