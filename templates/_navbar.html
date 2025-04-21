@@ -1,0 +1,101 @@
+<!-- templates/_navbar.html -->
+<nav class="navbar navbar-inverse custom-navbar">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">
+                <img src="{{ url_for('static', filename='assets/logo/tenticle_and_throw.png') }}" alt="Tenticle and Throw Logo" style="height:50px;" class="navbar-logo"/>
+            </a>
+        </div>
+
+        <div class="collapse navbar-collapse" id="myNavbar">
+            <ul class="nav navbar-nav">
+                <li class="{% if request.path == '/' %}active{% endif %}"><a href="{{ url_for('home') }}">Home</a></li>
+                <li class="{% if request.path.startswith('/products') %}active{% endif %}"><a
+                        href="{{ url_for('products') }}">Products</a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                <li>
+                    <a href="#" onclick="support_modal(event)">
+                        <span class="glyphicon glyphicon-wrench"></span> Support
+                    </a>
+                </li>
+                <!-- Modal -->
+                <div class="modal " id="exampleModalCenter" tabindex="-1" role="dialog"
+                    aria-labelledby="exampleModalCenterTitle" aria-hidden="true" style="min-height:100%">
+                    <div class="modal-dialog modal-dialog-centered modal-tall" role="document">
+                        <div id="m" class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="exampleModalLongTitle">How are we doing?</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+
+                            <nav class="navbar navbar-inverse">
+                                <div class="container-fluid">
+                                    <div class="navbar-header">
+                                        <button type="button" class="navbar-toggle" data-toggle="collapse"
+                                            data-target="#feedbackNavbar">
+                                            <span class="icon-bar"></span>
+                                            <span class="icon-bar"></span>
+                                            <span class="icon-bar"></span>
+                                        </button>
+                                    </div>
+                                    <div class="collapse navbar-collapse" id="feedbackNavbar">
+                                        <ul class="nav navbar-nav">
+                                            <li class="navbar-text">How was your experience?</li>
+                                        </ul>
+                                        <form class="navbar-form navbar-left">
+                                            <div class="btn-group" data-toggle="buttons">
+                                                <label class="btn btn-danger feedback-btn">
+                                                    <input type="radio" name="feedback" value="very-bad"> Very Bad
+                                                </label>
+                                                <label class="btn btn-warning feedback-btn">
+                                                    <input type="radio" name="feedback" value="bad"> Bad
+                                                </label>
+                                                <label class="btn btn-default feedback-btn">
+                                                    <input type="radio" name="feedback" value="ok"> Ok
+                                                </label>
+                                                <label class="btn btn-info feedback-btn">
+                                                    <input type="radio" name="feedback" value="good"> Good
+                                                </label>
+                                                <label class="btn btn-success feedback-btn">
+                                                    <input type="radio" name="feedback" value="great"> Great
+                                                </label>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </nav>
+
+
+                            <div class="modal-body">
+                                <textarea id="support-body" style="width:100%;height:100%"
+                                    placeholder="This is the default text"></textarea>
+                            </div>
+                            <div class="modal-footer">
+                                <!--<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button> -->
+                                <button type="button" class="btn btn-primary" onclick=support(event)>Send
+                                    Report</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <li class="{% if request.path.startswith('/account') %}active{% endif %}">
+                    <a href="{{ url_for('account') }}"><span class="glyphicon glyphicon-user"></span> Your Account</a>
+                </li>
+                <li class="{% if request.path.startswith('/cart') %}active{% endif %}">
+                    <a href="{{ url_for('view_cart_page') }}"><span class="glyphicon glyphicon-shopping-cart"></span>
+                        Cart</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <script src="./static/index.js"></script>
+</nav>

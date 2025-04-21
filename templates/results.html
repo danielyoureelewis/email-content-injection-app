@@ -1,43 +1,320 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <title>Email Viewer</title>
-    <script>
-        function loadEmail(filename) {
-            fetch(`/get_email?filename=${filename}`)
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById("email-subject").innerText = data.subject;
-                document.getElementById("email-from").innerText = "From: " + data.from;
-                document.getElementById("email-to").innerText = "To: " + data.to;
-                document.getElementById("email-date").innerText = "Date: " + data.date;
-                document.getElementById("email-body").innerHTML = data.body;
-            })
-            .catch(error => console.error("Error loading email:", error));
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
         }
+
+        #container {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+
+        #sidebar {
+            width: 25vw;
+            min-width: 150px;
+            max-width: 800px;
+            background: #f4f4f4;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid #ccc;
+        }
+
+        #dragbar {
+            width: 5px;
+            cursor: col-resize;
+            background-color: #007bff;
+            height: 100%;
+            z-index: 10;
+        }
+
+        #email-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        #email-list li {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+        }
+
+        #email-list li:hover {
+            background: #e0e0e0;
+        }
+
+        #content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #tabs {
+            display: flex;
+            background: #ddd;
+            padding: 10px;
+        }
+
+        .tab {
+            padding: 10px;
+            cursor: pointer;
+            margin-right: 10px;
+            background: #ccc;
+            border-radius: 5px;
+        }
+
+        .tab.active {
+            background: #007bff;
+            color: white;
+        }
+
+        .tab-content {
+            width: 100%;
+            display: none;
+            padding: 20px;
+            flex-grow: 1;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        #email-subject {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .email-info {
+            color: #555;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        #email-body {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: #fff;
+            min-height: 200px;
+        }
+
+        .button {
+            margin-top: 15px;
+            padding: 10px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            border-radius: 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .button:hover {
+            background: #0056b3;
+        }
+
+        #ollama-response {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: #f9f9f9;
+            display: none;
+        }
+
+        #prompt-input {
+            width: 100%;
+            height: 150px;
+        }
+    </style>
+    <link rel="stylesheet" href="/static/css/index.css">
+    <script>
+        let currentFilename = "";
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+        }
+        /*
+        function loadEmail(filename) {
+            currentFilename = filename;
+            fetch(`/get_email?filename=${filename}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("email-subject").innerText = data.subject || "No Subject";
+                    document.getElementById("email-from").innerText = "From: " + (data.from || "Unknown");
+                    document.getElementById("email-to").innerText = "To: " + (data.to || "Unknown");
+                    document.getElementById("email-date").innerText = "Date: " + (data.date || "Unknown");
+                    document.getElementById("email-body").innerHTML = data.body || "<i>No content</i>";
+
+                    document.getElementById("download-btn").href = `/download_email?filename=${filename}`;
+                    document.getElementById("download-btn").style.display = "inline-block";
+                    document.getElementById("ollama-btn").style.display = "inline-block";
+                })
+                .catch(error => console.error("Error loading email:", error));
+        }
+        */
+        function loadEmail(filename) {
+    currentFilename = filename;
+    fetch(`/get_email?filename=${filename}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("email-subject").innerText = data.subject || "No Subject";
+            document.getElementById("email-from").innerText = "From: " + (data.from || "Unknown");
+            document.getElementById("email-to").innerText = "To: " + (data.to || "Unknown");
+            document.getElementById("email-date").innerText = "Date: " + (data.date || "Unknown");
+            
+            // Create iframe for email content with srcdoc
+            const emailBody = document.getElementById("email-body");
+            emailBody.innerHTML = '';
+            
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <base target="_blank">
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 10px; }
+                    </style>
+                </head>
+                <body>${data.body || "<i>No content</i>"}</body>
+                </html>
+            `;
+            
+            const iframe = document.createElement('iframe');
+            iframe.srcdoc = htmlContent;
+            iframe.style.width = '100%';
+            iframe.style.height = '500px';
+            iframe.style.border = 'none';
+            iframe.onload = function() {
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    iframe.style.height = (iframeDoc.body.scrollHeight + 20) + 'px';
+                } catch(e) {
+                    console.error("Error resizing iframe:", e);
+                }
+            };
+            
+            emailBody.appendChild(iframe);
+            
+            document.getElementById("download-btn").href = `/download_email?filename=${filename}`;
+            document.getElementById("download-btn").style.display = "inline-block";
+            document.getElementById("ollama-btn").style.display = "inline-block";
+        })
+        .catch(error => console.error("Error loading email:", error));
+}
+       
+        function analyzeWithollama() {
+            let prompt = document.getElementById("prompt-input").value;
+
+            fetch(`/get_email?filename=${currentFilename}`)
+                .then(response => response.json())
+                .then(data => {
+                    let emailContent = `Subject: ${data.subject}\nFrom: ${data.from}\nTo: ${data.to}\nDate: ${data.date}\n\n${data.body}`;
+
+                    let ollamaPrompt = `${prompt}\n\nEmail Content:\n${emailContent}`;
+
+                    fetch("http://localhost:11434/api/generate", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            model: "openhermes",
+                            prompt: ollamaPrompt,
+                            stream: false
+                        })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            let responseDiv = document.getElementById("ollama-response");
+                            responseDiv.style.display = "block";
+                            responseDiv.innerHTML = `<strong>ollama Response:</strong><br>${data.response || data}`;
+                        })
+                        .catch(error => console.error("Error analyzing email:", error));
+                })
+                .catch(error => console.error("Error loading email:", error));
+        }
+
+        let isDragging = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const dragbar = document.getElementById('dragbar');
+            const sidebar = document.getElementById('sidebar');
+
+            dragbar.addEventListener('mousedown', function (e) {
+                isDragging = true;
+                document.body.style.cursor = 'col-resize';
+            });
+
+            document.addEventListener('mousemove', function (e) {
+                if (!isDragging) return;
+                const newWidth = e.clientX;
+                if (newWidth > 150 && newWidth < 800) {
+                    sidebar.style.width = `${newWidth}px`;
+                }
+            });
+
+            document.addEventListener('mouseup', function () {
+                isDragging = false;
+                document.body.style.cursor = 'default';
+            });
+        });
     </script>
 </head>
+
 <body>
+    <main>
+        <div id="container">
+            <div id="sidebar">
+                <h2>Inbox</h2>
+                <ul id="email-list">
+                    {% for email in emails %}
+                    <li onclick="loadEmail('{{ email }}')">{{ email }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
 
-    <h1>Email Viewer</h1>
-    <div>
-        <h2>Emails:</h2>
-        <ul id="email-list">
-            {% for email in emails %}
-                <li><a href="#" onclick="loadEmail('{{ email }}')">{{ email }}</a></li>
-            {% endfor %}
-        </ul>
-    </div>
+            <div id="dragbar"></div>
 
-    <hr>
+            <!-- Main Content -->
+            <div id="content">
+                <div id="tabs">
+                    <div class="tab active" data-tab="email-viewer" onclick="showTab('email-viewer')">Email Viewer</div>
+                    <div class="tab" data-tab="prompt-settings" onclick="showTab('prompt-settings')">Prompt Settings
+                    </div>
+                </div>
 
-    <div>
-        <h2 id="email-subject">Select an email</h2>
-        <p id="email-from"></p>
-        <p id="email-to"></p>
-        <p id="email-date"></p>
-        <div id="email-body"></div>
-    </div>
+                <!-- Email Viewer -->
+                <div id="email-viewer" class="tab-content active">
+                    <h2 id="email-subject">Select an email</h2>
+                    <p class="email-info" id="email-from"></p>
+                    <p class="email-info" id="email-to"></p>
+                    <p class="email-info" id="email-date"></p>
+                    <div id="email-body"></div>
+                    <a id="download-btn" class="button" href="#" download style="display:none;">Download Email</a>
+                    <button id="ollama-btn" class="button" onclick="analyzeWithollama()" style="display:none;">Send to
+                        ollama</button>
+                    <div id="ollama-response"></div>
+                </div>
 
+                <!-- Prompt Settings -->
+                <div id="prompt-settings" class="tab-content">
+                    <h2>Adjust ollama Prompt</h2>
+                    <textarea
+                        id="prompt-input">Analyze this email and determine if a normal user would click on any links or interact with it.</textarea>
+                </div>
+            </div>
+    </main>
 </body>
+
 </html>

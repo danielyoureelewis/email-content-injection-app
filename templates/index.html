@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Bootstrap Example</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="/static/css/index.css">
+    <style>
+       
+    </style>
+
+</head>
+
+<body>
+    <main>
+        {% include '_navbar.html' %}
+    <div class="container">
+        <div class="row" style="background-color: #f7f7f7; border: 1px solid #ccc; padding: 20px; margin-bottom: 30px;">
+            <div class="col-md-6">
+                <img src="/static/assets/images/home/store.png" class="img-responsive center-block" alt="The Tentacle and Throw storefront" style="width:100%;">
+            </div>
+            <div class="col-md-6">
+                <h2 class="text-center">Cozy. Cursed. Yours.</h2>
+                <p>
+                    <strong>There was never supposed to be a store.</strong>
+                    <br><br>
+                    Not in the traditional sense. Not in the way that sane men mean when they speak of <em>commerce</em>. The Tentacle and Throw was not founded—it <em>manifested</em>, scrawled into reality by the twitching hands of sleepwalkers and shouted into being by the yawning mouths of empty voids.
+                    <br><br>
+                    We are not <em>entrepreneurs</em>. We are merely vessels—temporary meat-suits wrapped in questionable sweaters—through which the store continues to birth itself anew, each day more incoherent than the last.
+                    <br><br>
+                    Here, nestled between shifting dimensions and the back alley of a TJ Maxx, we offer things. Things that should not be. Throws that whisper. Candles that sweat. Coasters that remember your dreams. All curated with a discerning eye toward the <em>incomprehensible</em> and the <em>mildly decorative</em>.
+                    <br><br>
+                    Do not ask where our inventory comes from. Do not ask why it sometimes rearranges itself while you’re blinking. Do not ask why every third customer review is just the same phrase repeated in a long-dead language.
+                    <br><br>
+                    Instead, surrender to the strange. Buy a pillow. Offer it to the Thing in your walls. Tell it we sent you.
+                </p>
+                <p class="text-center"><em>The Tentacle and Throw – Cozy. Cursed. Yours.</em></p>
+            </div>
+        </div>
+    </div>
+    
+</main>
+    <footer class="container-fluid text-center">
+        <p>Tenticle and Throw Copyright</p>
+        <div class="container mt-4">
+            <form class="inline-form">
+                <label for="signUpEmail" class="mb-0">Signup to our newsletter to recieve exclusive deals!</label>
+                <input id="signUpEmail" type="email" class="form-control" placeholder="Email Address">
+                <button type="button" class="btn btn-danger" onclick="handleSignUP(event)">Sign Up</button>
+            </form>
+        </div>
+           
+        
+    </footer>
+    <script src="./static/index.js"></script>
+</body>
+
+</html>
