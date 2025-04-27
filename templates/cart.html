@@ -8,9 +8,9 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <style> 
-            #cart-list {
+        #cart-list {
             column-count: 3;
             column-gap: 20px;
         }
@@ -42,7 +42,6 @@
             font-size: 18px;
             color: green;
         }
-
 
         .navbar {
             margin-bottom: 50px;
@@ -88,7 +87,6 @@
             border: none;
             cursor: pointer;
             border-radius: 10px;
-            /* Adjust this value to make the corners more or less rounded */
         }
 
         .checkout-btn:hover {
@@ -97,21 +95,28 @@
 
         .checkout-sidebar {
             right: 0;
-            bottom: 20px;
-            /* Adjusted top position to avoid overlapping with the navbar */
-            width: auto;
+            top: 90px;
+            width: 20vw;
             padding: 20px;
             border: 1px solid #ddd;
             background-color: #f9f9f9;
             border-radius: 10px;
             z-index: 20;
-            /* Ensure it's on top of other content */
             margin-right: 20px;
             font-size: 24px;
-            /* Added margin to the right */
+        }
+
+        /* Checkout Form Styling */
+        .checkout-form .form-group {
+            margin-bottom: 15px;
+        }
+
+        .checkout-form input,
+        .checkout-form textarea {
+            width: 100%;
         }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="/static/css/index.css">
 </head>
 
@@ -128,11 +133,11 @@
         </div>
 
         <div class="container">
-            <h2 class="text-center">Your Cart</h2>
+            <h2 id="heading" class="text-center">Your Cart</h2>
             <div class="row" id="cart-list"></div>
         </div>
 
-        <!-- Sidebar for Checkout -->
+        <!-- Sidebar for Checkout (always visible) -->
         <div class="checkout-sidebar">
             <h4>Order Summary</h4>
             <div class="total-row">
@@ -147,7 +152,40 @@
                 <span><strong>Total:</strong></span>
                 <span id="total">$5.00</span> <!-- Default total cost, can be updated dynamically -->
             </div>
-            <button class="checkout-btn" onclick="proceedToCheckout()">Proceed to Checkout</button>
+
+            <!-- Checkout Form -->
+            <h4>Shipping & Payment</h4>
+            <form id="payment-form" class="checkout-form">
+                <!-- Shipping Address -->
+                <div class="form-group">
+                    <label for="shipping-address">Shipping Address</label>
+                    <textarea id="shipping-address" class="form-control" rows="3" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="billing_address">Billing Address</label>
+                    <textarea id="billing-address" class="form-control" rows="3" required></textarea>
+                </div>
+
+                <!-- Credit Card Details -->
+                <div class="form-group">
+                    <label for="card-number">Credit Card Number</label>
+                    <input type="text" id="card-number" class="form-control" placeholder="Card Number" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="expiration-date">Expiration Date</label>
+                    <input type="text" id="expiration-date" class="form-control" placeholder="MM/YY" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="cvv">CVV</label>
+                    <input type="text" id="cvv" class="form-control" placeholder="CVV" required>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="checkout-btn">Complete Purchase</button>
+            </form>
         </div>
 
     </main>
@@ -165,9 +203,16 @@
         <script>
             // Function to fetch cart contents from the API
             document.addEventListener('DOMContentLoaded', function () {
+                loadProfileForCheckout();
                 fetch('/cart')
                     .then(response => response.json())
                     .then(data => {
+                        // Check if the cart is empty
+                        if (data.length === 0) {
+                            //change the heading
+                            document.getElementById('heading').textContent = "Your Cart is Empty";
+                            return;
+                        }
                         let cartList = document.getElementById('cart-list');
                         let subtotal = 0;
                         data.forEach(cart => {
@@ -221,8 +266,80 @@
                     });
             });
 
-            
+            // Handle form submission for checkout
+            document.getElementById('payment-form').addEventListener('submit', function (e) {
+                e.preventDefault(); // Prevent the form from submitting and redirecting
+                console.log("here");
+                // Collect form data
+                const shippingAddress = document.getElementById('shipping-address').value;
+                const billinngAddress = document.getElementById('billing-address').value;
+                const cardNumber = document.getElementById('card-number').value;
+                const expirationDate = document.getElementById('expiration-date').value;
+                const cvv = document.getElementById('cvv').value;
+                
+                // Prepare data for the POST request
+                const data = {
+                    shipping_address: shippingAddress,
+                    billing_address: billinngAddress,
+                    card_number: cardNumber,
+                    expiration_date: expirationDate,
+                    cvv: cvv
+                };
+                console.log(data);
+                // Send the data to the server (POST request)
+                fetch('/checkout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message === 'Checkout successful!') {
+                        showCartNotification(`🦑 Thank you for your order`);
+                        //clear the cart
+                        document.getElementById('cart-list').innerHTML = '';
+                        //reset checkout form
+                        document.getElementById('shipping-address').value = '';
+                        document.getElementById('billing-address').value = '';
+                        document.getElementById('card-number').value = '';
+                        document.getElementById('expiration-date').value = '';
+                        document.getElementById('cvv').value = '';
+                        //reset total
+                        document.getElementById('subtotal').textContent = `$0.00`;
+                        document.getElementById('shipping').textContent = `$0.00`;
+                        document.getElementById('total').textContent = `$0.00`;
+                    } else {
+                        showCartNotification("There was an issue with your payment. Please try again.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Error during checkout:', error);
+                    alert("An error occurred. Please try again.");
+                });
+            });
 
+            // Load user profile and pre-fill checkout fields
+function loadProfileForCheckout() {
+    fetch('/api/profile')
+        .then(response => response.json())
+        .then(profile => {
+            document.getElementById('shipping-address').value = profile.shipping_address || '';
+            document.getElementById('billing-address').value = profile.billing_address || '';
+            document.getElementById('card-number').value = maskCardNumber(profile.card_number) || '';
+            document.getElementById('expiration-date').value = profile.card_expiration || '';
+        })
+        .catch(error => {
+            console.error('Error loading profile for checkout:', error);
+        });
+}
+
+function maskCardNumber(cardNumber) {
+    if (!cardNumber || cardNumber.length < 4) return cardNumber;
+    const last4 = cardNumber.toString().slice(-4);
+    return `**** **** **** ${last4}`;
+}
         </script>
         <script src="{{ url_for('static', filename='index.js') }}"></script>
 </body>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mystic Verification - Tentacle & Throw</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        .mfa-container {
+            max-width: 400px;
+            margin: 80px auto;
+            padding: 30px;
+            background: var(--color-off-white);
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            text-align: center;
+        }
+        .mfa-container h1 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: var(--primary-text-color);
+        }
+        .mfa-container p {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: var(--color-dark-gray);
+        }
+        .mfa-container input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 15px 0;
+            border: 1px solid var(--primary-text-color);
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .mfa-container button {
+            background: var(--btn-bg);
+            color: var(--btn-color);
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .mfa-container button:hover {
+            background: var(--primary-text-color);
+        }
+        .error-message {
+            color: red;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="mfa-container">
+        <h1>Verify Thyself</h1>
+        <p>Enter the secret code whispered to you beyond mortal comprehension.</p>
+
+        <input type="text" id="mfa_code" placeholder="Enter your code..." required>
+        <button onclick="submitMFA()">Confirm the Oath</button>
+
+        <div id="error" class="error-message"></div>
+    </div>
+
+    <script>
+        function submitMFA() {
+            const code = document.getElementById('mfa_code').value;
+
+            fetch('{{ url_for("mfa") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ mfa_code: code })
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = "{{ url_for('home') }}"; // Redirect on success
+                } else {
+                    return response.json().then(data => {
+                        document.getElementById('error').innerText = data.error || "An unknown horror occurred.";
+                    });
+                }
+            })
+            .catch(error => {
+                document.getElementById('error').innerText = "The tentacles of the nether realms interfered.";
+            });
+        }
+    </script>
+</body>
+</html>

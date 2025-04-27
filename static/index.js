@@ -97,7 +97,7 @@ function handleSignIn(e) {
   };
   let username = document.getElementById('signin-name').value
   let password = document.getElementById('signin-password').value
-  console.log('here')
+
 
   fetch('/signin', {
     method: 'POST',
@@ -111,9 +111,9 @@ function handleSignIn(e) {
     })
   })
     .then(response => response.json())
-    .then(data => {
-      console.log(data);      
+    .then(data => { 
       if (data.message && data.message.includes('successful!')) {
+        console.log("here");
         document.getElementById('mfa').hidden = false;
         document.getElementById('authinputs-1').hidden = true;
       } else if (data.message && data.message.includes('Invalid username or password.')) {
@@ -127,6 +127,7 @@ function handleSignIn(e) {
       // Handle the response data
     })
     .catch(error => {
+      console.log('Error:', error);
       // Handle errors
     });
 }
@@ -157,6 +158,15 @@ function handleMFA(e) {
       document.getElementById('mfa').hidden = true;
       document.getElementById('authinputs-1').hidden = false;
       // Handle the response data
+      if (data.successful) {
+        document.location = '/';
+      } else{
+        // Handle invalid MFA code
+        console.log("Error signing in:", data);
+        document.getElementById('mfa').hidden = false;
+        document.getElementById('authinputs-1').hidden = true;
+        showNotification(`❌ Invalid MFA code. Please try again.`);
+      }
     })
     .catch(error => {
       // Handle errors
@@ -208,7 +218,7 @@ function addToCart(e, item) {
   console.log(e);
   e.preventDefault();
   console.log(item);
-  showCartNotification(`🦑 The tendrils accept your offering.`);
+  showNotification(`🦑 The tendrils accept your offering.`);
   fetch('/cart/add', {
     method: 'POST',
     headers: {
@@ -257,7 +267,7 @@ function handleForgotPassword(e) {
   }
 }
 
-function showCartNotification(message) {
+function showNotification(message) {
   const notification = document.getElementById('cart-notification');
   notification.innerText = message;
   notification.style.display = 'block';
@@ -268,7 +278,7 @@ function showCartNotification(message) {
 }
 
 function deleteCartItem(productId, card) {
-  showCartNotification(`☠️ A sacrifice has been undone.`);
+  showNotification(`☠️ A sacrifice has been undone.`);
   fetch('/cart/delete', {
       method: 'POST',
       headers: {
@@ -291,10 +301,10 @@ function deleteCartItem(productId, card) {
 function updateCartQuantity(productId, action, card) {
   console.log(action);
   if (action === 'increase') {
-      showCartNotification(`🦑 The tendrils accept your offering.`);
+      showNotification(`🦑 The tendrils accept your offering.`);
   }
   else if (action === 'decrease') {
-      showCartNotification(`☠️ A sacrifice has been undone.`);
+      showNotification(`☠️ A sacrifice has been undone.`);
   }
   fetch('/update_cart', {
       method: 'POST',
