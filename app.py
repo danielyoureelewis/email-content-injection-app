@@ -1,5 +1,5 @@
 #! /usr/local/bin/python
-from flask import Flask, render_template, jsonify, request, session, redirect
+from flask import Flask, render_template, jsonify, request, session, redirect, url_for
 from flask_session import Session
 import sys
 import os
@@ -121,50 +121,98 @@ def init_db():
             cursor = conn.cursor()
 
             # Create users table
-            cursor.execute('''CREATE TABLE users (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                email TEXT UNIQUE NOT NULL,
-                                username TEXT NOT NULL,
-                                password TEXT NOT NULL,
-                                mfa INTEGER,
-                                verified BOOL NOT NULL,
-                                verification_code TEXT NOT NULL,
-                                forgot_password_code TEXT,
-                                cart INTEGER)''')
+            cursor.execute('''
+                CREATE TABLE users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT UNIQUE NOT NULL,
+                    username TEXT NOT NULL,
+                    password TEXT NOT NULL,
+                    mfa INTEGER,
+                    verified BOOL NOT NULL,
+                    verification_code TEXT NOT NULL,
+                    forgot_password_code TEXT,
+                    cart INTEGER,
+                    shipping_address TEXT,
+                    billing_address TEXT,
+                    card_number INTEGER,
+                    card_expiration TEXT
+                    )
+                ''')
 
             # Create carts table
-            cursor.execute('''CREATE TABLE IF NOT EXISTS carts (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                user_id INTEGER NOT NULL,
-                                FOREIGN KEY (user_id) REFERENCES users(id))''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS carts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            ''')
 
-            # Create cart_items table with quantity support
-            cursor.execute('''CREATE TABLE IF NOT EXISTS cart_items (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                cart_id INTEGER NOT NULL,
-                                product_id INTEGER NOT NULL,
-                                quantity INTEGER NOT NULL DEFAULT 1,
-                                FOREIGN KEY (cart_id) REFERENCES carts(id),
-                                FOREIGN KEY (product_id) REFERENCES products(id),
-                                UNIQUE(cart_id, product_id))''')
+            # Create cart_items table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS cart_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    cart_id INTEGER NOT NULL,
+                    product_id INTEGER NOT NULL,
+                    quantity INTEGER NOT NULL DEFAULT 1,
+                    FOREIGN KEY (cart_id) REFERENCES carts(id),
+                    FOREIGN KEY (product_id) REFERENCES products(id),
+                    UNIQUE(cart_id, product_id)
+                )
+            ''')
 
             # Create products table
-            cursor.execute('''CREATE TABLE products (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                image TEXT NOT NULL,
-                                name TEXT NOT NULL,
-                                description TEXT NOT NULL,
-                                price REAL NOT NULL)''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS products (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    image TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    price REAL NOT NULL
+                )
+            ''')
+
+            # Create orders table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS orders (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    full_name TEXT,
+                    email TEXT,
+                    shipping_address TEXT,
+                    billing_address TEXT,
+                    order_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    status TEXT DEFAULT 'Processing',
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            ''')
+
+            # Create order_items table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS order_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    order_id INTEGER NOT NULL,
+                    product_id INTEGER,
+                    product_name TEXT,
+                    quantity INTEGER,
+                    price REAL,
+                    FOREIGN KEY (order_id) REFERENCES orders(id),
+                    FOREIGN KEY (product_id) REFERENCES products(id)
+                )
+            ''')
 
             conn.commit()
             print("[INFO] Database initialized.")
-    
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM products LIMIT 1")
-    rows = cursor.fetchall()
-    if not rows:
-        insert_initial_products()
+
+    else:
+        # Already exists -- ensure products are populated if empty
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM products LIMIT 1")
+            rows = cursor.fetchall()
+            if not rows:
+                insert_initial_products()
+
 
 # Call this on startup
 init_db()
@@ -301,6 +349,13 @@ def get_email():
 @app.route("/account")
 def account():
     """Render the results page where users can pick an email to view."""
+    if session:
+        print(session)
+        if session.get("level") == 0:
+            session.modified = True 
+            return render_template("account.html")
+        elif session.get("level") == 1:
+            return render_template("profile.html")
     return render_template("account.html")
 
 def generateOTP() :
@@ -321,7 +376,7 @@ def generateOTP() :
 def register():
     if request.method == "POST":
         data = request.get_json()
-        
+
         username = data["username"]
         email = data["email"]
         password = data["password"]
@@ -336,13 +391,20 @@ def register():
                     INSERT INTO users (username, email, password, verified, verification_code)
                     VALUES (?, ?, ?, ?, ?)
                 ''', (username, email, password, False, verification_code))
-
                 user_id = cursor.lastrowid
 
                 # Create an empty cart for the user
                 cursor.execute('''
                     INSERT INTO carts (user_id) VALUES (?)
                 ''', (user_id,))
+                cart_id = cursor.lastrowid
+
+                # UPDATE user to link to cart
+                cursor.execute('''
+                    UPDATE users
+                    SET cart = ?
+                    WHERE id = ?
+                ''', (cart_id, user_id))
 
                 conn.commit()
 
@@ -351,17 +413,23 @@ def register():
                 formatted_date = current_date.strftime("%Y_%m_%d_%H_%M_%S")
                 filename = formatted_date + '_register'
                 
-                template_path = os.path.join(os.path.dirname(__file__), '..', 'email_templates', 'verify.html')
+                template_path = os.path.join(os.path.dirname(__file__), 'email_templates', 'verify.html')
                 with open(template_path, 'r') as file:
                     body = file.read()
-                    body = body.format(**locals())
+                    body = body.format(verification_code=verification_code, username=username)
 
                 create_eml_file("noreply@tenticleandthrow.local", email, "Welcome to Tenticle & Throw!", body, filename=filename)
 
+                # Store user info in session
+                session["user_id"] = user_id
+                session["username"] = username
+                session["level"] = 0
+
                 return jsonify({"message": f"Signup successful! Welcome, {username}!"})
-            
+
             except sqlite3.IntegrityError:
                 return jsonify({"message": f"Username or email already exists!"}), 400
+
 
 
 # Sign-In Route
@@ -371,11 +439,12 @@ def signin():
         data = request.get_json()
         username = data["username"]
         password = data["password"]
-
+        print(data)
         with sqlite3.connect(DB_PATH) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT id, username, email, verified FROM users WHERE username = ? AND password = ?", (username, password))
             user = cursor.fetchone()
+            print(user)
             if user[3] == 0:
                 return f'{{"message":"Please verify your email address."}}', 401    
         if user:
@@ -392,15 +461,17 @@ def signin():
                 body = file.read()
                 token = session['token']
                 body = body.format(**locals())
-                print(body)
             create_eml_file("noreply@tenticleandthrow.local", email, "Tenticle & Throw Login Token", body, filename=filename)
-            return jsonify({"successful":"200"})
+            #session modification
+            session.modified = True
+            return jsonify({"message":"successful!"}), 200
         else:
             return f'{{"message":"Invalid username or password."}}', 401
 
 @app.route("/cart/add", methods=["POST"])
 def add_to_cart():
     print('/cart/add')
+    print(session)
     if "user_id" not in session:
         return jsonify({"error": "Unauthorized"}), 401
 
@@ -409,13 +480,15 @@ def add_to_cart():
 
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
-
+        print(session["user_id"])
         # Get user's cart_id
         cursor.execute("SELECT id FROM carts WHERE user_id = ?", (session["user_id"],))
         result = cursor.fetchone()
+        print(result)
+
         if not result:
             return jsonify({"error": "Cart not found."}), 404
-        
+
         cart_id = result[0]
 
         # Check if item is already in cart_items
@@ -452,10 +525,11 @@ def view_cart():
     with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-
+        print(session["user_id"])
         # Get the user's cart ID
         cursor.execute("SELECT id FROM carts WHERE user_id = ?", (session["user_id"],))
         cart_row = cursor.fetchone()
+        print(cart_row)
         if not cart_row:
             return jsonify({"error": "Cart not found."}), 404
 
@@ -501,14 +575,17 @@ def support():
 def products():
     return render_template("products.html")
 
-@app.route("/mfa", methods=["POST"])
+@app.route("/mfa", methods=["GET", "POST"])
 def mfa():
+    print('mfa')
     data = request.get_json()
     mfa = data["mfa"]
     print(session['token'])
     print(mfa)
     if session['token'] == mfa:
+        print(session)
         session['level'] = 1
+        print(session)
         return jsonify({"successful":"200"})
     else:
         return jsonify({"unsuccessful":"200"})
@@ -560,24 +637,26 @@ def verify():
     if not code:
         return "Invalid or missing verification code.", 400
 
-    db = get_db()
-    cursor = db.cursor()
-
-    cursor.execute("SELECT * FROM users WHERE verification_code = ?", (code,))
-    user = cursor.fetchone()
-
-    if user:
-        if user['verified']:
-            return "Your email has already been verified."
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.cursor()
-            # Update the user's verified status
-            cursor.execute("UPDATE users SET verified = 1 WHERE id = ?", (user['id'],))
-            db.commit()
-            #redirect to the app root
-            return redirect('/')
-    else:
-        return "Invalid verification code.", 404
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, verified FROM users WHERE verification_code = ?", (code,))
+        user = cursor.fetchone()
+        print(user)
+        if user:
+            if user[1]:
+                return "Your email has already been verified."
+            with sqlite3.connect(DB_PATH) as conn:
+                cursor = conn.cursor()
+                # Update the user's verified status
+                
+                cursor.execute("UPDATE users SET verified = 1 WHERE id = ?", (user[0],))
+                conn.commit()
+                #redirect to the app root
+                #this counts as mfa update the session level
+                session["level"] = 1
+                return redirect('/')
+        else:
+            return "Invalid verification code.", 404
 
 
 @app.route("/update_cart", methods=["POST"])
@@ -657,6 +736,249 @@ def product_view(product_id):
         return render_template('product.html', product=product_data)
     else:
         return "Product not found", 404
+
+# --- Stub for Luhn algorithm card validation ---
+def validate_card_number(card_number):
+    print(card_number)
+    def luhn_checksum(card_number):
+        def digits_of(n):
+            return [int(d) for d in str(n)]
+        digits = digits_of(card_number)
+        odd_digits = digits[-1::-2]
+        even_digits = digits[-2::-2]
+        checksum = sum(odd_digits)
+        for d in even_digits:
+            checksum += sum(digits_of(d * 2))
+        return checksum % 10
+
+    return luhn_checksum(card_number) == 0
+
+# --- Checkout Route ---
+@app.route("/checkout", methods=["GET", "POST"])
+def checkout():
+    if request.method == "GET":
+        return render_template("checkout.html")
+
+    user_id = session.get('user_id')
+
+    if not user_id:
+        return jsonify({"error": "User not logged in."}), 401
+
+    data = request.get_json()
+
+    shipping_address = data.get('shipping_address')
+    billing_address = data.get('billing_address')
+
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            # Step 1: Fetch user info
+            cursor.execute('SELECT username, email, cart FROM users WHERE id = ?', (user_id,))
+            user = cursor.fetchone()
+
+            if not user:
+                return jsonify({"error": "User not found."}), 404
+
+            full_name = user[0]
+            email = user[1]
+            cart_id = user[2]
+
+            if not cart_id:
+                return jsonify({"error": "No cart found for user."}), 400
+
+            # Step 2: Fetch cart items
+            cursor.execute('''
+                SELECT products.id, products.name, products.price, cart_items.quantity
+                FROM cart_items
+                JOIN products ON cart_items.product_id = products.id
+                WHERE cart_items.cart_id = ?
+            ''', (cart_id,))
+            cart_items = cursor.fetchall()
+
+            if not cart_items:
+                return jsonify({"error": "Your cart is empty."}), 400
+
+            # Step 3: Insert new order
+            cursor.execute('''
+                INSERT INTO orders (user_id, full_name, email, shipping_address, billing_address)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_id, full_name, email, shipping_address, billing_address))
+            order_id = cursor.lastrowid
+
+            # Step 4: Insert order items
+            for item in cart_items:
+                cursor.execute('''
+                    INSERT INTO order_items (order_id, product_id, product_name, quantity, price)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (
+                    order_id,
+                    item['id'],
+                    item['name'],
+                    item['quantity'],
+                    item['price']
+                ))
+
+            # Step 5: Clear the cart
+            cursor.execute('DELETE FROM cart_items WHERE cart_id = ?', (cart_id,))
+            conn.commit()
+
+            return jsonify({"message": "Checkout successful!"})
+
+    except Exception as e:
+        print("[ERROR] Checkout failed:", e)
+        return jsonify({"error": "Checkout failed. Please try again."}), 500
+
+@app.route('/api/profile', methods=["GET"])
+def get_profile():
+    user_id = session.get('user_id')
+
+    if not user_id:
+        return jsonify({}), 401
+
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT username, email, shipping_address, billing_address, card_number, card_expiration
+            FROM users
+            WHERE id = ?
+        ''', (user_id,))
+        user = cursor.fetchone()
+
+        if not user:
+            return jsonify({}), 404
+
+        return jsonify({
+            'username': user['username'],
+            'email': user['email'],
+            'shipping_address': user['shipping_address'] or '',
+            'billing_address': user['billing_address'] or '',
+            'card_number': user['card_number'] or '',
+            'card_expiration': user['card_expiration'] or ''
+        })
+
+
+
+
+@app.route("/api/orders", methods=["GET"])
+def get_orders():
+    user_id = session.get('user_id')
+
+    if not user_id:
+        return jsonify([])
+
+    orders_data = []
+
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            # Step 1: Get all orders for this user
+            cursor.execute('''
+                SELECT id, full_name, email, shipping_address, billing_address, order_time, status
+                FROM orders
+                WHERE user_id = ?
+                ORDER BY order_time DESC
+            ''', (user_id,))
+            orders = cursor.fetchall()
+
+            for order in orders:
+                order_id = order['id']
+
+                # Step 2: Get items for this order
+                cursor.execute('''
+                    SELECT product_name, quantity, price
+                    FROM order_items
+                    WHERE order_id = ?
+                ''', (order_id,))
+                items = cursor.fetchall()
+
+                orders_data.append({
+                    'id': order_id,
+                    'full_name': order['full_name'],
+                    'email': order['email'],
+                    'shipping_address': order['shipping_address'],
+                    'billing_address': order['billing_address'],
+                    'order_time': order['order_time'],
+                    'status': order['status'],
+                    'items': [
+                        {
+                            'product_name': item['product_name'],
+                            'quantity': item['quantity'],
+                            'price': item['price']
+                        } for item in items
+                    ],
+                    'total': sum(item['price'] * item['quantity'] for item in items)
+                })
+
+        return jsonify(orders_data)
+
+    except Exception as e:
+        print("[ERROR] Failed to load orders:", e)
+        return jsonify([]), 500
+
+
+@app.route("/logout")
+def logout():
+    session.clear()  # Wipe out the session (logs user out completely)
+    return redirect(url_for('account'))  # Redirect them back to your login/signup page
+
+
+def get_user_from_db(user_id):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute('''
+            SELECT username, email, shipping_address, billing_address, card_number
+            FROM users
+            WHERE id = ?
+        ''', (user_id,))
+        return cur.fetchone()
+
+@app.route('/api/profile/update', methods=["POST"])
+def update_profile():
+    user_id = session.get('user_id')
+
+    if not user_id:
+        return jsonify({}), 401
+
+    data = request.get_json()
+
+    field_mapping = {
+        'email': 'email',
+        'shipping_address': 'shipping_address',
+        'billing_address': 'billing_address',
+        'card_number': 'card_number',
+        'card_expiration': 'card_expiration'
+    }
+
+    field_to_update = None
+    value = None
+
+    for key, db_field in field_mapping.items():
+        if key in data:
+            field_to_update = db_field
+            value = data[key]
+            break
+
+    if not field_to_update:
+        return jsonify({"error": "Invalid field."}), 400
+
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute(f'''
+            UPDATE users
+            SET {field_to_update} = ?
+            WHERE id = ?
+        ''', (value, user_id))
+        conn.commit()
+
+    return jsonify({"message": "Profile updated successfully!"})
+
 
 
 if __name__ == "__main__":

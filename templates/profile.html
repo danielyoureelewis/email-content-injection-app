@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>My Profile - Tentacle and Throw</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/index.css">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+    <style>
+        .profile-container {
+            margin-top: 50px;
+            max-width: 800px;
+            background-color: #f5f5f0;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .profile-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .tentacle-divider {
+            width: 100px;
+            height: 10px;
+            background: url('/static/assets/images/tentacle_divider.png') no-repeat center;
+            background-size: contain;
+            margin: 20px auto;
+        }
+
+        .profile-field {
+            margin-bottom: 15px;
+        }
+
+        .profile-value {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+
+        .profile-edit-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .profile-value span,
+        .profile-edit-container,
+        .profile-value button {
+            margin-bottom: 0;
+        }
+
+        .profile-value input,
+        .profile-value textarea {
+            flex: 0 0 auto;
+            width: auto;
+            min-width: 150px;
+            max-width: 250px;
+            height: 30px;
+            line-height: 1.2;
+            padding: 4px 6px;
+            font-size: 14px;
+        }
+
+        .edit-btn {
+            padding: 0;
+            font-size: 12px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .save-edit-btn,
+        .cancel-edit-btn {
+            padding: 2px 6px;
+            font-size: 12px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-btn:hover {
+            color: #5A4AB0;
+        }
+
+        .order-card {
+            background-color: white;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+        }
+
+        #profile-update-message {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        {% include '_navbar.html' %}
+
+        <div class="container">
+            <div class="row">
+                <div class="col-md-8 col-md-offset-2">
+
+                    <div class="profile-container">
+                        <div class="profile-header">
+                            <h1 id="user-full-name">Welcome, [Loading...]</h1>
+                            <p class="lead">Watcher of the Waves • Dreamer in the Deep</p>
+                            <div class="tentacle-divider"></div>
+                        </div>
+
+                        <div id="profile-update-message"></div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h3>Your Details</h3>
+
+                                <!-- Email -->
+                                <div class="profile-field">
+                                    <strong>Email:</strong>
+                                    <div class="profile-value">
+                                        <span id="user-email-display">[Loading...]</span>
+                                        <div id="user-email-edit" class="profile-edit-container" style="display: none;">
+                                            <input type="text" class="form-control input-sm" id="edit-email-input">
+                                            <button class="btn btn-success btn-xs save-edit-btn"
+                                                data-field="email">✅</button>
+                                            <button class="btn btn-danger btn-xs cancel-edit-btn"
+                                                data-field="email">❌</button>
+                                        </div>
+                                        <button class="btn btn-link btn-xs edit-btn" data-field="email"
+                                            title="Edit">✏️</button>
+                                    </div>
+                                </div>
+
+                                <!-- Shipping Address -->
+                                <div class="profile-field">
+                                    <strong>Shipping Address:</strong>
+                                    <div class="profile-value">
+                                        <span id="user-shipping_address-display">[Loading...]</span>
+                                        <div id="user-shipping_address-edit" class="profile-edit-container"
+                                            style="display: none;">
+                                            <textarea class="form-control input-sm" id="edit-shipping_address-input"
+                                                rows="2"></textarea>
+                                            <button class="btn btn-success btn-xs save-edit-btn"
+                                                data-field="shipping_address">✅</button>
+                                            <button class="btn btn-danger btn-xs cancel-edit-btn"
+                                                data-field="shipping_address">❌</button>
+                                        </div>
+                                        <button class="btn btn-link btn-xs edit-btn" data-field="shipping_address"
+                                            title="Edit">✏️</button>
+                                    </div>
+                                </div>
+
+                                <!-- Billing Address -->
+                                <div class="profile-field">
+                                    <strong>Billing Address:</strong>
+                                    <div class="profile-value">
+                                        <span id="user-billing_address-display">[Loading...]</span>
+                                        <div id="user-billing_address-edit" class="profile-edit-container"
+                                            style="display: none;">
+                                            <textarea class="form-control input-sm" id="edit-billing_address-input"
+                                                rows="2"></textarea>
+                                            <button class="btn btn-success btn-xs save-edit-btn"
+                                                data-field="billing_address">✅</button>
+                                            <button class="btn btn-danger btn-xs cancel-edit-btn"
+                                                data-field="billing_address">❌</button>
+                                        </div>
+                                        <button class="btn btn-link btn-xs edit-btn" data-field="billing_address"
+                                            title="Edit">✏️</button>
+                                    </div>
+                                </div>
+
+                                <!-- Card Number -->
+                                <div class="profile-field">
+                                    <strong>Card Number:</strong>
+                                    <div class="profile-value">
+                                        <span id="user-card_number-display">[Loading...]</span>
+                                        <div id="user-card_number-edit" class="profile-edit-container"
+                                            style="display: none;">
+                                            <input type="text" class="form-control input-sm"
+                                                id="edit-card_number-input">
+                                            <button class="btn btn-success btn-xs save-edit-btn"
+                                                data-field="card_number">✅</button>
+                                            <button class="btn btn-danger btn-xs cancel-edit-btn"
+                                                data-field="card_number">❌</button>
+                                        </div>
+                                        <button class="btn btn-link btn-xs edit-btn" data-field="card_number"
+                                            title="Edit">✏️</button>
+                                    </div>
+                                </div>
+
+                                <!-- Card Number -->
+                                <div class="profile-field">
+                                    <strong>Card Expiration:</strong>
+                                    <div class="profile-value">
+                                        <span id="user-card_expiration-display">[Loading...]</span>
+                                        <div id="user-card_expiration-edit" class="profile-edit-container"
+                                            style="display: none;">
+                                            <input type="text" class="form-control input-sm"
+                                                id="edit-card_expiration-input">
+                                            <button class="btn btn-success btn-xs save-edit-btn"
+                                                data-field="card_expiration">✅</button>
+                                            <button class="btn btn-danger btn-xs cancel-edit-btn"
+                                                data-field="card_expiration">❌</button>
+                                        </div>
+                                        <button class="btn btn-link btn-xs edit-btn" data-field="card_expiration"
+                                            title="Edit">✏️</button>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div class="col-md-6">
+                                <h3>Account Actions</h3>
+                                <a href="/logout" class="btn btn-danger btn-block">Logout</a>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <h2>Your Past Orders</h2>
+                        <div id="orders-container">
+                            <p>[Loading orders...]</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="container-fluid text-center">
+        <p>Tentacle and Throw Copyright</p>
+        <div class="container mt-4">
+            <form class="inline-form">
+                <label for="signUpEmail" class="mb-0">Signup to our newsletter to receive exclusive deals!</label>
+                <input id="signUpEmail" type="email" class="form-control" placeholder="Email Address">
+                <button type="button" class="btn btn-danger" onclick="handleSignUP(event)">Sign Up</button>
+            </form>
+        </div>
+    </footer>
+
+    <script src="/static/index.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            function maskCardNumber(cardNumber) {
+                if (!cardNumber || cardNumber.length < 4) return cardNumber;
+                const last4 = cardNumber.toString().slice(-4);
+                return '**** **** **** ' + last4;
+            }
+
+            function resetFields() {
+                ['email', 'shipping_address', 'billing_address', 'card_number', 'card_expiration'].forEach(function (field) {
+                    $(`#user-${field}-edit`).hide();
+                    $(`#user-${field}-display`).show();
+                    $(`button[data-field="${field}"].edit-btn`).show();
+                });
+            }
+
+            function loadProfile() {
+                $.getJSON('/api/profile', function (data) {
+                    $('#user-full-name').text('Welcome, ' + data.username + '!');
+
+                    $('#user-email-display').text(data.email);
+                    $('#edit-email-input').val(data.email);
+
+                    $('#user-shipping_address-display').html(data.shipping_address.replace(/\n/g, '<br>'));
+                    $('#edit-shipping_address-input').val(data.shipping_address);
+
+                    $('#user-billing_address-display').html(data.billing_address.replace(/\n/g, '<br>'));
+                    $('#edit-billing_address-input').val(data.billing_address);
+
+                    $('#user-card_number-display').text(maskCardNumber(data.card_number));
+                    $('#edit-card_number-input').val(data.card_number);
+
+                    $('#user-card_expiration-display').text(data.card_expiration);
+                    $('#edit-card_expiration-input').val(data.card_expiration);
+
+                    resetFields();
+                });
+            }
+
+            function loadOrders() {
+                $.getJSON('/api/orders', function (data) {
+                    if (data.length === 0) {
+                        $('#orders-container').html('<p>You have not placed any orders yet.</p>');
+                    } else {
+                        let ordersHtml = '';
+                        data.forEach(function (order) {
+                            ordersHtml += `
+                        <div class="order-card">
+                            <h4>Order #${order.id} - ${order.status}</h4>
+                            <ul>
+                                ${order.items.map(item => `<li>${item.quantity}x ${item.product_name}</li>`).join('')}
+                            </ul>
+                            <p><strong>Total:</strong> $${order.total.toFixed(2)}</p>
+                        </div>
+                    `;
+                        });
+                        $('#orders-container').html(ordersHtml);
+                    }
+                });
+            }
+
+            function showEdit(field) {
+                $(`#user-${field}-display`).hide();
+                $(`#user-${field}-edit`).show();
+                $(`button[data-field="${field}"].edit-btn`).hide();
+            }
+
+            function hideEdit(field) {
+                $(`#user-${field}-edit`).hide();
+                $(`#user-${field}-display`).show();
+                $(`button[data-field="${field}"].edit-btn`).show();
+            }
+
+            function saveField(field) {
+                let newValue = $(`#edit-${field}-input, #edit-${field}-textarea`).val();
+                const payload = {};
+
+                if (field === 'card_number') {
+                    newValue = newValue.replace(/\D/g, ''); // REMOVE ALL NON-DIGITS FIRST
+                }
+
+                payload[field] = newValue;
+
+                // Validation
+                if (field === 'email') {
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(newValue)) {
+                        $('#profile-update-message').html('<div class="alert alert-danger">Invalid email address.</div>');
+                        return;
+                    }
+                }
+
+                if (field === 'card_number') {
+                    if (newValue.length < 13 || newValue.length > 19 || !luhnCheck(newValue)) {
+                        $('#profile-update-message').html('<div class="alert alert-danger">Invalid card number.</div>');
+                        return;
+                    }
+                }
+
+                if (field === 'card_expiration') {
+                    const expirationRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
+                    if (!expirationRegex.test(newValue)) {
+                        $('#profile-update-message').html('<div class="alert alert-danger">Invalid expiration date. Use MM/YY format.</div>');
+                        return;
+                    }
+                }
+
+                $.ajax({
+                    url: '/api/profile/update',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    success: function (response) {
+                        $('#profile-update-message').html('<div class="alert alert-success">Profile updated successfully!</div>');
+                        loadProfile();
+                    },
+                    error: function (xhr) {
+                        $('#profile-update-message').html('<div class="alert alert-danger">Failed to update profile.</div>');
+                        loadProfile();
+                    }
+                });
+            }
+
+
+
+            loadProfile();
+            loadOrders();
+
+            $(document).on('click', '.edit-btn', function () {
+                const field = $(this).data('field');
+                showEdit(field);
+            });
+
+            $(document).on('click', '.cancel-edit-btn', function () {
+                const field = $(this).data('field');
+                hideEdit(field);
+            });
+
+            $(document).on('click', '.save-edit-btn', function () {
+                const field = $(this).data('field');
+                saveField(field);
+            });
+        });
+
+        function luhnCheck(cardNumber) {
+            let sum = 0;
+            let shouldDouble = false;
+            for (let i = cardNumber.length - 1; i >= 0; i--) {
+                let digit = parseInt(cardNumber.charAt(i));
+
+                if (shouldDouble) {
+                    digit *= 2;
+                    if (digit > 9) digit -= 9;
+                }
+
+                sum += digit;
+                shouldDouble = !shouldDouble;
+            }
+            return sum % 10 === 0;
+        }
+
+    </script>
+
+</body>
+
+</html>
