@@ -15,208 +15,36 @@ from email.parser import BytesParser
 from email.mime.multipart import MIMEMultipart
 import sqlite3
 from datetime import datetime
+import uuid
+import base64
+import bcrypt
+from dotenv import load_dotenv
+from config import DB_PATH, EMAILS_DIR, CHALLENGE_DB_PATH
+from crypto_utils import hash_password, encrypt_card, decrypt_card
+
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
+load_dotenv()
+
+PASSWORD_PEPPER = os.getenv("PASSWORD_PEPPER")
+AES_KEY = os.getenv("AES_KEY").encode()
+AES_IV = os.getenv("AES_IV").encode()
 
 app = Flask(__name__)
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-EMAILS_DIR = "emails"  # Directory where .eml files are stored
-DB_PATH = "app.db"
+
+from db_setup import initialize
+initialize()
+
 
 @app.context_processor
 def inject_request():
     return dict(request=request)
-
-def insert_initial_products():
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        
-        products = [
-            (
-                '/static/assets/images/products/elder_bites.png',
-                'Elder Bites – Tentacly Good!',
-                'Start your day with a spoonful of madness! These cosmic crunchies swirl with ancient flavor and come with a free Elder Sign Fun Pack. Tentacles not included... or are they?',
-                24.99
-            ),
-            (
-                '/static/assets/images/products/toaster.png',
-                'Great Old Toaster – R’lyeh Toast!',
-                'This sanity-defying toaster brings the Great Old Ones to your breakfast table. Every slice drives you a little more mad... and that\'s before the butter hits. Make mornings mythos-worthy!',
-                29.99
-            ),
-            (
-                '/static/assets/images/products/ottoman.png',
-                'Esoteric Ottoman of Ulthar',
-                'An ottoman that whispers secrets when you rest your feet. Lose a memory, gain forbidden knowledge. Upholstered in interdimensional feline velvet.',
-                89.99
-            ),
-            (
-                '/static/assets/images/products/coffee_press.png',
-                'Cthulhu’s Coffee Press',
-                'Brew eldritch espresso with this kraken-bone French press. Produces the blackest brew this side of R’lyeh. Not responsible for psychic awakenings.',
-                39.99
-            ),
-            (
-                '/static/assets/images/products/candle_set.png',
-                'Necronomican Candle Set',
-                '“Crypt Dust,” “Blood of Shoggoth,” and “Eldritch Gardenia.” Smells like doom, and maybe vanilla. Glyphs appear as wax melts—don’t chant them!',
-                19.99
-            ),
-            (
-                '/static/assets/images/products/throw_blanket.png',
-                'Whispering Throw Blanket',
-                'Soft, warm, and occasionally mumbles in long-dead languages. Not recommended for insomniacs. Do not launder lest ye anger the weave.',
-                49.99
-            ),
-            (
-                '/static/assets/images/products/storage_cubes.png',
-                'Yog-Sothoth’s Modular Storage Cubes',
-                'Organize your soul. Infinite configurations. Improper arrangement may cause temporal overlap. Great for tomes or cursed tchotchkes.',
-                59.99
-            ),
-            (
-                '/static/assets/images/products/shower_curtain.png',
-                'Shub-Niggurath Shower Curtain',
-                'Adorned with the Black Goat of the Woods. Bleeds ichor during full moons. May scream if drawn too fast.',
-                34.99
-            ),
-            (
-                '/static/assets/images/products/dishware.png',
-                'Innsmouth Dishware Collection',
-                'Fishy plates that evolve the longer you use them. Cups mutter sea-chants. Comes with complimentary dread.',
-                74.99
-            ),
-            (
-                '/static/assets/images/products/area_rug.png',
-                'Carpet of the Crawling Chaos',
-                'A rug that grows with your nightmares. Subtly moves underfoot. Excellent for summoning or lounging.',
-                129.99
-            ),
-            (
-                '/static/assets/images/products/sleep_mask.png',
-                'Azathoth’s Sleep Mask',
-                'Blocks light, sound, and rational thought. Dreamless, timeless sleep guaranteed. Comes in Void Black.',
-                17.99
-            ),
-            (
-                '/static/assets/images/products/air_purifier.png',
-                'Eldritch Air Purifier',
-                'Purifies air—and spirits. Emits a low-frequency whimper. Blessed and cursed for optimal effect.',
-                99.99
-            )
-        ]
-
-        cursor.executemany('''INSERT INTO products (image, name, description, price)
-                              VALUES (?, ?, ?, ?)''', products)
-
-        conn.commit()
-        print("[INFO] Initial products inserted.")
-
-
-
-def init_db():
-    if not os.path.exists(DB_PATH):
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.cursor()
-
-            # Create users table
-            cursor.execute('''
-                CREATE TABLE users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    email TEXT UNIQUE NOT NULL,
-                    username TEXT NOT NULL,
-                    password TEXT NOT NULL,
-                    mfa INTEGER,
-                    verified BOOL NOT NULL,
-                    verification_code TEXT NOT NULL,
-                    forgot_password_code TEXT,
-                    cart INTEGER,
-                    shipping_address TEXT,
-                    billing_address TEXT,
-                    card_number INTEGER,
-                    card_expiration TEXT
-                    )
-                ''')
-
-            # Create carts table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS carts (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    FOREIGN KEY (user_id) REFERENCES users(id)
-                )
-            ''')
-
-            # Create cart_items table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS cart_items (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    cart_id INTEGER NOT NULL,
-                    product_id INTEGER NOT NULL,
-                    quantity INTEGER NOT NULL DEFAULT 1,
-                    FOREIGN KEY (cart_id) REFERENCES carts(id),
-                    FOREIGN KEY (product_id) REFERENCES products(id),
-                    UNIQUE(cart_id, product_id)
-                )
-            ''')
-
-            # Create products table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS products (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    image TEXT NOT NULL,
-                    name TEXT NOT NULL,
-                    description TEXT NOT NULL,
-                    price REAL NOT NULL
-                )
-            ''')
-
-            # Create orders table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS orders (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    full_name TEXT,
-                    email TEXT,
-                    shipping_address TEXT,
-                    billing_address TEXT,
-                    order_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    status TEXT DEFAULT 'Processing',
-                    FOREIGN KEY (user_id) REFERENCES users(id)
-                )
-            ''')
-
-            # Create order_items table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS order_items (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    order_id INTEGER NOT NULL,
-                    product_id INTEGER,
-                    product_name TEXT,
-                    quantity INTEGER,
-                    price REAL,
-                    FOREIGN KEY (order_id) REFERENCES orders(id),
-                    FOREIGN KEY (product_id) REFERENCES products(id)
-                )
-            ''')
-
-            conn.commit()
-            print("[INFO] Database initialized.")
-
-    else:
-        # Already exists -- ensure products are populated if empty
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM products LIMIT 1")
-            rows = cursor.fetchall()
-            if not rows:
-                insert_initial_products()
-
-
-# Call this on startup
-init_db()
-
 
 
 # Helper function to get a connection to the database
@@ -230,32 +58,54 @@ def get_db_connection():
 def get_products():
     conn = get_db_connection()
     cursor = conn.cursor()
-    
-    # Get the search term from the query parameters, if it exists
-    search_term = request.args.get('search')  
-    
+
+    search_term = request.args.get('search')
+    suspicious = False
+    products_data = []
+
     if search_term:
-        # If there is a search term, filter products by name
         query = f"SELECT id, name, description, price, image FROM products WHERE name LIKE '%{search_term}%'"
     else:
-        # If no search term, get all products
         query = "SELECT id, name, description, price, image FROM products"
-    
-    cursor.execute(query)  # Execute the query
-    products = cursor.fetchall()
-    
-    # Format the result into a list of dictionaries
-    products_data = [{
-        'id': product['id'],
-        'name': product['name'],
-        'description': product['description'],
-        'price': product['price'],
-        'image': product['image']
-    } for product in products]
-    
+
+    try:
+        cursor.execute(query)
+        products = cursor.fetchall()
+
+        products_data = [{
+            'id': product['id'],
+            'name': product['name'],
+            'description': product['description'],
+            'price': product['price'],
+            'image': product['image']
+        } for product in products]
+
+        # ✅ Detection logic: SQLi pattern AND leaked user data
+        if search_term:
+            search_term = urllib.parse.unquote(search_term)  # URL decode the search term
+            if "'" in search_term and "--" in search_term:
+                for product in products_data:
+                    if "tentaclemail" in product['name'].lower() or "tentaclemail" in product['description'].lower():
+                        suspicious = True
+                        break
+        # ✅ Mark challenge as solved using global "solved" flag
+        if suspicious:
+            try:
+                with sqlite3.connect(CHALLENGE_DB_PATH) as chal_conn:
+                    chal_cursor = chal_conn.cursor()
+                    chal_cursor.execute("SELECT solved FROM challenges WHERE uuid = '54460c30-2852-4880-bc98-6494d5b31dbe'")
+                    row = chal_cursor.fetchone()
+                    if row and not row[0]:  # not already solved
+                        chal_cursor.execute("UPDATE challenges SET solved = 1 WHERE uuid = '54460c30-2852-4880-bc98-6494d5b31dbe'")
+                        chal_conn.commit()
+            except sqlite3.Error as e:
+                print("[CHALLENGE DB ERROR]", e)
+    except Exception as e:
+        pass
+        #print("[SQL ERROR]", e)
+
     conn.close()
     return jsonify(products_data)
-
 
 def create_eml_file(sender, recipients, subject, body, filename="email"):
     if isinstance(recipients, str):
@@ -286,34 +136,77 @@ def convertEmailRecipient(email):
     email = re.sub(r'\.', '_', email)
     return email
 
-
 @app.route("/")
 def home():
-    return render_template("index.html")
+    if session and session["level"] > 0:
+        return render_template("index.html")
+    elif session and session["level"] == 0:
+        #send the user to the login page
+        return render_template("account.html", mfa_level=session["level"])
+    else:
+        return render_template("account.html", mfa_level=99)
 
 @app.route("/signup", methods=['POST'])
 def signup():
     print(request.host)
-    if request.method == 'POST':
-        content = (
-                    f'Thank you for subscribing to the Tentacle & Throw newsletter.<br><br>'
-                    f'We’re excited to keep you informed about our latest updates, insights, and offerings.<br><br>'
-                    f'If you prefer not to receive future communications, you may unsubscribe at any time by clicking '
-                    f'<a href="http://{request.host}/unsubscribe/{urllib.parse.quote(request.json["email"])}">here</a>.<br><br>'
-                    f'If you have any questions or concerns, feel free to reach out via our '
-                    f'<a href="http://127.0.0.1/contact">contact page</a>.<br><br>'
-                    f'<small>This email was sent by Tentacle & Throw. You are receiving this message because you opted in to receive '
-                    f'communications from us. If you believe this was sent in error, please unsubscribe or contact us. '
-                    f'Please do not reply to this email. For full details, see our terms and privacy policy on our website.</small>'
-                )
-        subject = f'{request.host} Newsletter Signup'
-        current_date = datetime.now()
-        formatted_date = current_date.strftime("%Y_%m_%d_%H_%M_%S")
-        filename = formatted_date + '_signup'
-        create_eml_file("noreply@tenticleandthrow.local", request.json["email"], subject, content, filename=filename)
-        return render_template("signUpThanks.html")
-    else:
-        print('else')
+
+    template_path = os.path.join(os.path.dirname(__file__), 'email_templates', 'newsletter_welcome.html')
+    with open(template_path, 'r') as file:
+        body_template = file.read()
+
+    request_data = request.get_json()
+    email = request_data["email"]
+    username = request_data.get("username", "")
+    safe_username = username if username else "there"
+
+    body = body_template.format(
+        username=safe_username,
+        email_encoded=email,
+        request=request
+    )
+
+    subject = f'{request.host} Newsletter Signup'
+    current_date = datetime.now()
+    formatted_date = current_date.strftime("%Y_%m_%d_%H_%M_%S")
+    filename = formatted_date + '_signup'
+
+    create_eml_file("noreply@tenticleandthrow.local", email, subject, body, filename=filename)
+
+    # 🚨 Detection #1: Host header manipulation
+    if request.host not in ["127.0.0.1", "localhost", "tentacleandthrow.local"]:
+        with sqlite3.connect(CHALLENGE_DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT solved FROM challenges WHERE uuid = '1f8aea60-7fbe-40f5-ae07-2cb720960d34'")
+            row = cursor.fetchone()
+            if row and not row[0]:
+                cursor.execute("UPDATE challenges SET solved = 1 WHERE uuid = '1f8aea60-7fbe-40f5-ae07-2cb720960d34'")
+                conn.commit()
+
+    # 🚨 Detection #2: HTML in username (Email Content Injection)
+    if "<" in username or ">" in username:
+        with sqlite3.connect(CHALLENGE_DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT solved FROM challenges WHERE uuid = 'b90cd1c8-09f2-4b9a-93a1-7e62f071551a'")
+            row = cursor.fetchone()
+            if row and not row[0]:
+                cursor.execute("UPDATE challenges SET solved = 1 WHERE uuid = 'b90cd1c8-09f2-4b9a-93a1-7e62f071551a'")
+                conn.commit()
+
+    return render_template("signUpThanks.html")
+
+
+
+from flask import request
+
+@app.route('/unsubscribe')
+def unsubscribe():
+    email = request.args.get('email')
+    if not email:
+        return "Missing email parameter.", 400
+    
+    # validate email format maybe here
+    # perform unsubscribe logic
+    return f"Email {email} has been unsubscribed.", 200
 
 # New /results page to list and view .eml files
 @app.route("/results")
@@ -349,14 +242,13 @@ def get_email():
 @app.route("/account")
 def account():
     """Render the results page where users can pick an email to view."""
-    if session:
-        print(session)
-        if session.get("level") == 0:
-            session.modified = True 
-            return render_template("account.html")
-        elif session.get("level") == 1:
-            return render_template("profile.html")
-    return render_template("account.html")
+    if session and session.get("level") == 1:
+        return render_template("profile.html")
+    elif session and session["level"] == 0:
+        #send the user to the login page
+        return render_template("account.html", mfa_level=session["level"])
+    else:
+        return render_template("account.html", mfa_level=99)
 
 def generateOTP() :
  
@@ -379,7 +271,8 @@ def register():
 
         username = data["username"]
         email = data["email"]
-        password = data["password"]
+        raw_password = data["password"]
+        password = hash_password(raw_password)  # Securely hashed
 
         with sqlite3.connect(DB_PATH) as conn:
             cursor = conn.cursor()
@@ -399,7 +292,7 @@ def register():
                 ''', (user_id,))
                 cart_id = cursor.lastrowid
 
-                # UPDATE user to link to cart
+                # Link user to cart
                 cursor.execute('''
                     UPDATE users
                     SET cart = ?
@@ -408,7 +301,7 @@ def register():
 
                 conn.commit()
 
-                # Create verification email
+                # Send verification email
                 current_date = datetime.now()
                 formatted_date = current_date.strftime("%Y_%m_%d_%H_%M_%S")
                 filename = formatted_date + '_register'
@@ -420,53 +313,77 @@ def register():
 
                 create_eml_file("noreply@tenticleandthrow.local", email, "Welcome to Tenticle & Throw!", body, filename=filename)
 
-                # Store user info in session
                 session["user_id"] = user_id
                 session["username"] = username
                 session["level"] = 0
 
+                profile_pics_dir = os.path.join("static", "profile_pics", username)
+                os.makedirs(profile_pics_dir, exist_ok=True)
+
                 return jsonify({"message": f"Signup successful! Welcome, {username}!"})
 
             except sqlite3.IntegrityError:
-                return jsonify({"message": f"Username or email already exists!"}), 400
+                return jsonify({"message": "Username or email already exists!"}), 400
+
 
 
 
 # Sign-In Route
 @app.route("/signin", methods=["POST"])
 def signin():
-    if request.method == "POST":
-        data = request.get_json()
-        username = data["username"]
-        password = data["password"]
-        print(data)
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT id, username, email, verified FROM users WHERE username = ? AND password = ?", (username, password))
-            user = cursor.fetchone()
-            print(user)
-            if user[3] == 0:
-                return f'{{"message":"Please verify your email address."}}', 401    
-        if user:
-            email = user[2]
-            username = user[1]
-            session["user_id"] = user[0]  # Store user_id in session
-            session["username"] = username
-            session["token"] = generateOTP()
-            session["level"] = 0
-            current_date = datetime.now()
-            formatted_date = current_date.strftime("%Y_%m_%d_%H_%M_%S")
-            filename = formatted_date + '_mfa'
-            with open('email_templates/mfa.html', 'r') as file:
-                body = file.read()
-                token = session['token']
-                body = body.format(**locals())
-            create_eml_file("noreply@tenticleandthrow.local", email, "Tenticle & Throw Login Token", body, filename=filename)
-            #session modification
-            session.modified = True
-            return jsonify({"message":"successful!"}), 200
-        else:
-            return f'{{"message":"Invalid username or password."}}', 401
+    data = request.get_json()
+    username = data["username"]
+    password = data["password"]
+
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+
+        # Fetch user, including seeded flag
+        cursor.execute("SELECT id, username, email, verified, password, seeded FROM users WHERE username = ?", (username,))
+        user = cursor.fetchone()
+
+        if not user:
+            return f'{{"message":"Invalid username."}}', 401
+
+        stored_hash = user[4]  # This is the hashed password from DB
+        print('here1')
+        if not bcrypt.checkpw((PASSWORD_PEPPER + password).encode(), stored_hash.encode()):
+            print("Invalid password")
+            return jsonify({"message": "Invalid username or password."}), 401
+        print('here')
+        if user[3] == 0:
+            return f'{{"message":"Please check your email for the verification address"}}', 401    
+
+        # ✅ Account Takeover Detection
+        if user[5]:  # seeded == 1
+            with sqlite3.connect(CHALLENGE_DB_PATH) as chal_conn:
+                chal_cursor = chal_conn.cursor()
+                chal_cursor.execute("SELECT solved FROM challenges WHERE uuid = 'ac0f5a78-70ab-44e2-91e7-2875df3f2a63'")
+                row = chal_cursor.fetchone()
+                if row and not row[0]:
+                    chal_cursor.execute("UPDATE challenges SET solved = 1 WHERE uuid = 'ac0f5a78-70ab-44e2-91e7-2875df3f2a63'")
+                    chal_conn.commit()
+
+        # Proceed with session
+        session["user_id"] = user[0]
+        session["username"] = user[1]
+        session["token"] = generateOTP()
+        session["level"] = 0
+
+        current_date = datetime.now()
+        formatted_date = current_date.strftime("%Y_%m_%d_%H_%M_%S")
+        filename = formatted_date + '_mfa'
+
+        with open('email_templates/mfa.html', 'r') as file:
+            body = file.read()
+            token = session['token']
+            body = body.format(**locals())
+
+        create_eml_file("noreply@tenticleandthrow.local", user[2], "Tenticle & Throw Login Token", body, filename=filename)
+
+        session.modified = True
+        return jsonify({"message": "successful!"}), 200
+
 
 @app.route("/cart/add", methods=["POST"])
 def add_to_cart():
@@ -520,12 +437,23 @@ def add_to_cart():
 @app.route("/cart", methods=["GET"])
 def view_cart():
     if "user_id" not in session:
-        return jsonify({"error": "You must be signed in to view your cart."}), 401
+        return render_template("account.html", mfa_level=99)
+
+    # 🚨 Detection: Forced browsing without completing MFA
+    if session.get("level", 0) == 0:
+        with sqlite3.connect(CHALLENGE_DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT solved FROM challenges WHERE uuid = '2ba998c0-d788-4a85-97ff-61e14ec08993'")
+            row = cursor.fetchone()
+            if row and not row[0]:
+                cursor.execute("UPDATE challenges SET solved = 1 WHERE uuid = '2ba998c0-d788-4a85-97ff-61e14ec08993'")
+                conn.commit()
 
     with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         print(session["user_id"])
+
         # Get the user's cart ID
         cursor.execute("SELECT id FROM carts WHERE user_id = ?", (session["user_id"],))
         cart_row = cursor.fetchone()
@@ -556,7 +484,7 @@ def view_cart():
 @app.route("/cart/view")
 def view_cart_page():
     if "user_id" not in session:
-        return "You must be signed in to view your cart.", 401
+        return render_template("account.html", mfa_level=99)
     return render_template("cart.html")
 
 @app.route("/support", methods=["POST"])
@@ -565,53 +493,94 @@ def support():
     support_email = data["variables"]["email_addr"]
     email_body = data["variables"]["body"]
     email_subject = data["variables"]["subject"]
+
     current_date = datetime.now()
     formatted_date = current_date.strftime("%Y_%m_%d_%H_%M_%S")
     filename = formatted_date + '_support'
+
     create_eml_file("support@tenticleandthrow.local", support_email, email_subject, email_body, filename=filename)
-    return jsonify({"successful":"200"})
+
+    # 🚨 Detection: attacker has changed the recipient
+    if support_email.strip().lower() != "support@tentacleandthrow.local":
+        with sqlite3.connect(CHALLENGE_DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT solved FROM challenges WHERE uuid = 'ea3dccb4-9ce3-49ae-a042-4b105e0a4cb0'")
+            row = cursor.fetchone()
+            if row and not row[0]:
+                cursor.execute("UPDATE challenges SET solved = 1 WHERE uuid = 'ea3dccb4-9ce3-49ae-a042-4b105e0a4cb0'")
+                conn.commit()
+
+    return jsonify({"successful": "200"})
+
 
 @app.route("/products", methods=["GET"])
 def products():
-    return render_template("products.html")
+    if session and session["level"] > 0:
+        return render_template("products.html")
+    elif session and session["level"] == 0:
+        #send the user to the login page
+        return render_template("account.html", mfa_level=session["level"])
+    else:
+        return render_template("account.html", mfa_level=99)
 
 @app.route("/mfa", methods=["GET", "POST"])
 def mfa():
     print('mfa')
     data = request.get_json()
-    mfa = data["mfa"]
-    print(session['token'])
-    print(mfa)
-    if session['token'] == mfa:
-        print(session)
-        session['level'] = 1
-        print(session)
-        return jsonify({"successful":"200"})
+    mfa_input = data.get("mfa", "")
+
+    if "mfa_attempts" not in session:
+        session["mfa_attempts"] = 0
+
+    session["mfa_attempts"] += 1
+    print("MFA attempt count:", session["mfa_attempts"])
+    
+    if session["token"] == mfa_input:
+        # ✅ Detection: excessive attempts (e.g., >5)
+        if session["mfa_attempts"] > 5:
+            with sqlite3.connect(CHALLENGE_DB_PATH) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT solved FROM challenges WHERE uuid = '8e8efb73-1d72-4f23-bac0-79bb567876b1'")
+                row = cursor.fetchone()
+                if row and not row[0]:
+                    cursor.execute("UPDATE challenges SET solved = 1 WHERE uuid = '8e8efb73-1d72-4f23-bac0-79bb567876b1'")
+                    conn.commit()
+
+        session["level"] = 1
+        session.pop("mfa_attempts", None)  # Reset
+        return jsonify({"successful": "200"})
     else:
-        return jsonify({"unsuccessful":"200"})
+        return jsonify({"unsuccessful": "200"})
+
 
 @app.route("/reset_password", methods=["GET", "POST"])
 def reset_password():
-    
     reset_code = request.args.get("reset_code")
 
     if request.method == "GET":
         if not reset_code:
-            return "Missing email or reset code", 400
+            return "Missing reset code", 400
 
-        # Optionally, verify the reset_code is valid before showing the form
+        # Verify the reset_code is valid before showing the form
         with sqlite3.connect(DB_PATH) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id FROM users WHERE forgot_password_code = ?", (reset_code))
+            print(type(reset_code))
+            cursor.execute("SELECT id, email FROM users WHERE forgot_password_code = ?", (reset_code,))
             user = cursor.fetchone()
 
         if not user:
             return "Invalid reset link", 400
 
+        user_id, email = user  # Unpack user information
+
         return render_template("reset_password_form.html", email=email, reset_code=reset_code)
 
     elif request.method == "POST":
-        new_password = request.form.get("new_password")
+        #get new_password from JSON
+        data = request.get_json()
+        new_password = data.get("new_password")
+        email = data.get("email")
+        reset_code = data.get("reset_code")
 
         if not new_password:
             return "Password cannot be empty", 400
@@ -627,8 +596,65 @@ def reset_password():
                 WHERE email = ? AND forgot_password_code = ?
             """, (hashed_password, email, reset_code))
             conn.commit()
+        
+        # return {"success": "Password reset successful!"}
+        return jsonify({"success": "Password reset successful!"})
 
-        return redirect(url_for("login"))  # or return a message like "Password reset!"
+@app.route("/forgot_password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        data = request.get_json()
+        email = data["email"]
+
+        if not email:
+            return "Email is required.", 400
+
+        reset_code = generateOTP()  # 6-digit random number
+
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT id FROM users WHERE email = ?', (email,))
+            user = cursor.fetchone()
+
+            if not user:
+                return "Email not found.", 404
+
+            # Save the reset code
+            cursor.execute('''
+                UPDATE users
+                SET forgot_password_code = ?
+                WHERE email = ?
+            ''', (reset_code, email))
+            conn.commit()
+
+        # Build the reset link
+        reset_link = f"{request.host_url}reset_password?email={urllib.parse.quote(email)}&reset_code={reset_code}"
+
+        # Load the HTML template
+        template_path = os.path.join(os.path.dirname(__file__), 'email_templates', 'reset_password.html')
+        with open(template_path, 'r') as file:
+            body_template = file.read()
+
+        # Insert the reset link into the template
+        body = body_template.format(reset_link=reset_link)
+
+        # Save it as a .eml file
+        current_date = datetime.now()
+        formatted_date = current_date.strftime("%Y_%m_%d_%H_%M_%S")
+        filename = f"{formatted_date}_password_reset"
+
+        create_eml_file(
+            sender="noreply@tentacleandthrow.local",
+            recipients=email,
+            subject="Tentacle & Throw Password Reset",
+            body=body,
+            filename=filename
+        )
+
+        # return {success: "200"}
+        return jsonify({"success": "Password reset email sent!"})
+
+    return render_template("forgot_password.html")
 
 
 @app.route('/verify')
@@ -717,25 +743,54 @@ def delete_cart_item():
 
         return jsonify({"success": True})
 
+def sanitize_comment(text):
+    # Strip dangerous tags
+    text = re.sub(r'</?(script|img|iframe|object|embed|link|style|svg|math|base)[^>]*?>', '', text, flags=re.IGNORECASE)
+    
+    # Strip on* event handlers (like onclick=, onload=, etc.)
+    text = re.sub(r'\son\w+\s*=\s*"[^"]*"', '', text, flags=re.IGNORECASE)
+    text = re.sub(r"\son\w+\s*=\s*'[^']*'", '', text, flags=re.IGNORECASE)
 
-@app.route('/product/<int:product_id>')
-def product_view(product_id):
+    # Remove style and javascript: or data: URLs
+    text = re.sub(r'style\s*=\s*["\'].*?["\']', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'(src|href)\s*=\s*["\']\s*(javascript|data):[^"\']*["\']', '', text, flags=re.IGNORECASE)
+
+    return text
+
+
+@app.route('/product/<int:product_id>', methods=['GET', 'POST'])
+def product_page(product_id):
+    if session and session["level"] == 0:
+        mfa_level = session.get("level", 0)
+        return render_template("account.html", mfa_level=mfa_level)
+    if request.method == 'POST':
+        commenter_name = request.form['commenter_name']
+        comment_text = request.form['comment_text']
+        # Sanitize the comment text
+        comment_text = sanitize_comment(comment_text)
+        commenter_name = sanitize_comment(commenter_name)
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO comments (product_id, name, text) VALUES (?, ?, ?)
+            ''', (product_id, commenter_name, comment_text))
+
+        return redirect(f'/product/{product_id}')
+
+    # On GET, load the product and its comments
     with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute('SELECT id, image, name, description, price FROM products WHERE id = ?', (product_id,))
+
+        cursor.execute('SELECT name, text FROM comments WHERE product_id = ?', (product_id,))
+        comments = cursor.fetchall()
+
+        cursor.execute('SELECT id, name, price, description, image FROM products WHERE id = ?', (product_id,))
         product = cursor.fetchone()
 
-    if product:
-        product_data = {
-            "id": product[0],
-            "image": product[1],
-            "name": product[2],
-            "description": product[3],
-            "price": product[4],
-        }
-        return render_template('product.html', product=product_data)
-    else:
-        return "Product not found", 404
+    return render_template('product.html', product=product, comments=comments)
+
 
 # --- Stub for Luhn algorithm card validation ---
 def validate_card_number(card_number):
@@ -760,12 +815,10 @@ def checkout():
         return render_template("checkout.html")
 
     user_id = session.get('user_id')
-
     if not user_id:
         return jsonify({"error": "User not logged in."}), 401
 
     data = request.get_json()
-
     shipping_address = data.get('shipping_address')
     billing_address = data.get('billing_address')
 
@@ -774,21 +827,19 @@ def checkout():
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
 
-            # Step 1: Fetch user info
+            # Fetch user info
             cursor.execute('SELECT username, email, cart FROM users WHERE id = ?', (user_id,))
             user = cursor.fetchone()
-
             if not user:
                 return jsonify({"error": "User not found."}), 404
 
-            full_name = user[0]
-            email = user[1]
-            cart_id = user[2]
-
+            full_name = user['username']
+            email = user['email']
+            cart_id = user['cart']
             if not cart_id:
                 return jsonify({"error": "No cart found for user."}), 400
 
-            # Step 2: Fetch cart items
+            # Get cart items
             cursor.execute('''
                 SELECT products.id, products.name, products.price, cart_items.quantity
                 FROM cart_items
@@ -796,18 +847,17 @@ def checkout():
                 WHERE cart_items.cart_id = ?
             ''', (cart_id,))
             cart_items = cursor.fetchall()
-
             if not cart_items:
                 return jsonify({"error": "Your cart is empty."}), 400
 
-            # Step 3: Insert new order
+            # Insert new order
             cursor.execute('''
                 INSERT INTO orders (user_id, full_name, email, shipping_address, billing_address)
                 VALUES (?, ?, ?, ?, ?)
             ''', (user_id, full_name, email, shipping_address, billing_address))
             order_id = cursor.lastrowid
 
-            # Step 4: Insert order items
+            # Insert order items
             for item in cart_items:
                 cursor.execute('''
                     INSERT INTO order_items (order_id, product_id, product_name, quantity, price)
@@ -820,7 +870,7 @@ def checkout():
                     item['price']
                 ))
 
-            # Step 5: Clear the cart
+            # Clear the cart
             cursor.execute('DELETE FROM cart_items WHERE cart_id = ?', (cart_id,))
             conn.commit()
 
@@ -830,36 +880,50 @@ def checkout():
         print("[ERROR] Checkout failed:", e)
         return jsonify({"error": "Checkout failed. Please try again."}), 500
 
-@app.route('/api/profile', methods=["GET"])
-def get_profile():
-    user_id = session.get('user_id')
+@app.route("/test", methods=["GET"])
+def profile_v2():
+    return render_template("profile2.html")
 
+@app.route('/api/profile')
+def get_profile():
+    user_id = session.get("user_id")
     if not user_id:
-        return jsonify({}), 401
+        return jsonify({"error": "Unauthorized"}), 401
 
     with sqlite3.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-
         cursor.execute('''
-            SELECT username, email, shipping_address, billing_address, card_number, card_expiration
-            FROM users
-            WHERE id = ?
+            SELECT username, email, shipping_address, billing_address,
+                   card_number, card_expiration, profile_picture_url
+            FROM users WHERE id = ?
         ''', (user_id,))
-        user = cursor.fetchone()
+        row = cursor.fetchone()
 
-        if not user:
-            return jsonify({}), 404
+    if not row:
+        return jsonify({"error": "User not found"}), 404
 
-        return jsonify({
-            'username': user['username'],
-            'email': user['email'],
-            'shipping_address': user['shipping_address'] or '',
-            'billing_address': user['billing_address'] or '',
-            'card_number': user['card_number'] or '',
-            'card_expiration': user['card_expiration'] or ''
-        })
+    username, email, shipping, billing, encrypted_card, exp, profile_picture_url = row
 
+    try:
+        if encrypted_card:
+            card = decrypt_card(encrypted_card)
+        else:
+            card = None
+    except Exception:
+        card = "[DECRYPTION FAILED]"
+
+    pic_url = profile_picture_url or "/static/profile_pics/default.png"
+
+    return jsonify({
+        "id": user_id,
+        "username": username,
+        "email": email,
+        "shipping_address": shipping,
+        "billing_address": billing,
+        "card_number": card,
+        "card_expiration": exp,
+        "profile_picture": pic_url
+    })
 
 
 
@@ -942,12 +1006,10 @@ def get_user_from_db(user_id):
 @app.route('/api/profile/update', methods=["POST"])
 def update_profile():
     user_id = session.get('user_id')
-
     if not user_id:
         return jsonify({}), 401
 
     data = request.get_json()
-
     field_mapping = {
         'email': 'email',
         'shipping_address': 'shipping_address',
@@ -963,6 +1025,8 @@ def update_profile():
         if key in data:
             field_to_update = db_field
             value = data[key]
+            if key == "card_number":
+                value = encrypt_card(value)  # Encrypt before storage
             break
 
     if not field_to_update:
@@ -980,7 +1044,207 @@ def update_profile():
     return jsonify({"message": "Profile updated successfully!"})
 
 
+import requests
+
+@app.route('/api/profile/picture', methods=['POST'])
+def upload_profile_picture():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT username FROM users WHERE id = ?", (user_id,))
+        result = cursor.fetchone()
+
+    if not result:
+        return jsonify({"error": "User not found"}), 404
+
+    username = result[0]
+    user_dir = os.path.join("static", "profile_pics", username)
+    os.makedirs(user_dir, exist_ok=True)
+
+    # Check if user provided a file or a URL
+    if 'picture' in request.files:
+        file = request.files['picture']
+        if file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
+
+        filepath = os.path.join(user_dir, file.filename)
+        file.save(filepath)
+
+    elif request.is_json and 'url' in request.json:
+        url = request.json['url']
+
+        # SSRF vulnerability: the server blindly fetches the URL
+        response = requests.get(url, timeout=5)
+        if response.status_code != 200:
+            return jsonify({"error": "Could not fetch remote image"}), 400
+
+        filename = os.path.basename(url.split("?")[0])
+        filepath = os.path.join(user_dir, filename)
+
+        with open(filepath, 'wb') as f:
+            f.write(response.content)
+
+    else:
+        return jsonify({"error": "No picture or URL provided"}), 400
+
+    # Store path in DB
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE users
+            SET profile_picture_url = ?
+            WHERE id = ?
+        ''', (filepath, user_id))
+        conn.commit()
+
+    return jsonify({"message": f"Uploaded to {filepath}"}), 200
+
+@app.route("/api/profile/email", methods=["GET"])
+def email_profile():
+    user_id = session.get("user_id")
+    if not user_id:
+        return "User not logged in", 403
+
+    # Fetch user from DB
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT username, email, shipping_address, profile_picture_url
+            FROM users WHERE id = ?
+        """, (user_id,))
+        row = cursor.fetchone()
+
+    if not row:
+        return "User not found", 404
+
+    # Load injected HTML from user-controlled file path
+    pic_path = row["profile_picture_url"]  # e.g. "../../static/uploads/evil.html"
+    try:
+        with open(pic_path, "r") as f:
+            profile_pic_html = f.read()
+    except Exception as e:
+        profile_pic_html = f"<p>Could not load profile picture: {e}</p>"
+
+    # Render email with raw HTML injection
+    body = render_template(
+        "profile.html",
+        username=row["username"],
+        email=row["email"],
+        shipping_address=row["shipping_address"],
+        profile_picture_url=profile_pic_html  # 🚨 Injecting file contents directly
+    )
+
+    # Save email to .eml using create_eml_file function
+    eml_path = f"profile_email_{user_id}"
+
+    subject = f'Your Tentacle and Throw Profile'
+    current_date = datetime.now()
+    formatted_date = current_date.strftime("%Y_%m_%d_%H_%M_%S")
+    filename = formatted_date + '_signup'
+    create_eml_file("noreply@tenticleandthrow.local", row["email"], subject, body, filename=filename)
+
+    return f"Check your email for your profile information!", 200
+
+@app.route('/api/challenges', methods=['GET'])
+def get_challenges():
+    with sqlite3.connect(CHALLENGE_DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT id, uuid, name, description, points, category, solved FROM challenges")
+        all_challenges = cursor.fetchall()
+
+    grouped = {}
+    for row in all_challenges:
+        entry = {
+            'id': row['id'],
+            'uuid': row['uuid'],
+            'name': row['name'],
+            'description': row['description'],
+            'points': row['points'],
+            'solved': bool(row['solved'])
+        }
+        grouped.setdefault(row['category'], []).append(entry)
+
+    output = []
+    for category, challenges in grouped.items():
+        output.append({
+            'category': category,
+            'solved': sum(1 for c in challenges if c['solved']),
+            'total': len(challenges),
+            'challenges': challenges
+        })
+
+    return jsonify(output)
+
+@app.route('/api/submit_solution', methods=['POST'])
+def submit_solution():
+    data = request.get_json()
+    challenge_id = data.get('challenge_id')
+
+    if not challenge_id:
+        return jsonify({'success': False, 'message': 'Missing challenge ID'}), 400
+
+    with sqlite3.connect(CHALLENGE_DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT solved FROM challenges WHERE id = ?", (challenge_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            return jsonify({'success': False, 'message': 'Challenge not found'}), 404
+
+        if row[0]:  # already solved
+            return jsonify({'success': False, 'message': 'Already solved'}), 400
+
+        cursor.execute("UPDATE challenges SET solved = 1 WHERE id = ?", (challenge_id,))
+        conn.commit()
+
+    return jsonify({'success': True, 'message': 'Challenge marked as solved'})
+
+
+
+
+@app.route('/scoreboard', methods=['GET'])
+def scoreboard():
+    with sqlite3.connect(CHALLENGE_DB_PATH) as conn:
+        cursor = conn.cursor()
+
+        # Total points possible
+        cursor.execute("SELECT SUM(points) FROM challenges")
+        total_possible = cursor.fetchone()[0] or 0
+
+        # Points from solved challenges
+        cursor.execute("SELECT SUM(points) FROM challenges WHERE solved = 1")
+        total_solved = cursor.fetchone()[0] or 0
+
+    return render_template("scoreboard.html", total=total_possible, solved=total_solved)
+
+
+@app.route('/api/solve/<uuid>', methods=['POST'])
+def solve_challenge_by_uuid(uuid):
+    with sqlite3.connect(CHALLENGE_DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, solved FROM challenges WHERE uuid = ?", (uuid,))
+        row = cursor.fetchone()
+
+        if not row:
+            return jsonify({'success': False, 'message': 'Challenge not found'}), 404
+
+        if row[1]:
+            return jsonify({'success': False, 'message': 'Already solved'}), 400
+
+        cursor.execute("UPDATE challenges SET solved = 1 WHERE uuid = ?", (uuid,))
+        conn.commit()
+
+    return jsonify({'success': True, 'message': 'Challenge marked as solved'})
+
+
+
+
 
 if __name__ == "__main__":
-    
     app.run(debug=True)
