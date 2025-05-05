@@ -1,12 +1,14 @@
 //this function handles newsletter signup - host header content injection
 function handleSignUP(e) {
   console.log(e);
+  showNotification('🔮 Your Fate is Sealed... Welcome to Tentacle & Throw! 🔮 The stars have shifted, the ancient ones have whispered, and your email has been claimed.')
   e.preventDefault()
   let options = {
     method: 'POST',
     headers: {}
   };
-  let email = document.getElementById('signUpEmail').value
+  let email = document.getElementById('signUpEmail').value;
+  let username = sessionStorage.getItem('username');
   console.log(email)
   if (email.includes('@')) {
     fetch('/signup', {
@@ -16,11 +18,13 @@ function handleSignUP(e) {
       },
       body: JSON.stringify({
         // Your data to send
-        email
+        email,
+        username
       })
     })
       .then(response => response.json())
       .then(data => {
+
         // Handle the response data
       })
       .catch(error => {
@@ -60,6 +64,7 @@ function handleRegistration(e) {
 
         if (data.message && data.message.includes('Signup successful!')) {
           document.getElementById('signin-name').value = document.getElementById('signup-name').value;
+          //put signin-name in session storage
           document.getElementById('signin-password').value = document.getElementById('signup-password').value;
           $('[href="#signin"]').tab('show');
         } else if (data.message.includes('already exists!')) {
@@ -95,6 +100,7 @@ function handleSignIn(e) {
     method: 'POST',
     headers: {}
   };
+  // get username from session storage
   let username = document.getElementById('signin-name').value
   let password = document.getElementById('signin-password').value
 
@@ -111,19 +117,22 @@ function handleSignIn(e) {
     })
   })
     .then(response => response.json())
-    .then(data => { 
+    .then(data => {
       if (data.message && data.message.includes('successful!')) {
         console.log("here");
-        document.getElementById('mfa').hidden = false;
-        document.getElementById('authinputs-1').hidden = true;
-      } else if (data.message && data.message.includes('Invalid username or password.')) {
+        sessionStorage.setItem('username', username);
+        $("#authinputs-1").hide();
+        $("#mfa").show();
+        //document.getElementById('mfa').hidden = false;
+        //document.getElementById('authinputs-1').hidden = true;
+      } else if (data.message && data.message.includes('Invalid')) {
         console.log("Error signing in:", data.message);
         const alertContainer = document.getElementById('signin-alert-container');
         alertContainer.innerHTML = `<div class="alert alert-danger alert-dismissible fade in" role="alert">
         <button type="button" class="close" data-dismiss="alert" aria-label="Close">&times;</button>
         <strong>Error:</strong> ${data.message} </div>`;
       }
-      
+
       // Handle the response data
     })
     .catch(error => {
@@ -160,7 +169,7 @@ function handleMFA(e) {
       // Handle the response data
       if (data.successful) {
         document.location = '/';
-      } else{
+      } else {
         // Handle invalid MFA code
         console.log("Error signing in:", data);
         document.getElementById('mfa').hidden = false;
@@ -174,7 +183,7 @@ function handleMFA(e) {
 }
 
 function support_modal(e) {
-  if (e){e.preventDefault()} // Prevent the link from navigating
+  if (e) { e.preventDefault() } // Prevent the link from navigating
   console.log("Support clicked"); // Debugging to confirm function is firing
   $('#exampleModalCenter').modal('show'); // Show the modal manually
   console.log("Modal shown"); // Debugging to confirm modal is shown
@@ -186,7 +195,7 @@ function support(e) {
   e.preventDefault();
 
   let body = document.getElementById('support-body').value;
-  let email_addr = 'support@online.store';
+  let email_addr = 'support@tentacleandthrow.local';
   let subject = 'Feedback';
 
   // Get the selected feedback option
@@ -237,7 +246,7 @@ function addToCart(e, item) {
         return;
       }
     }
-  )
+    )
 }
 
 // Handles forgot password functionality
@@ -260,6 +269,16 @@ function handleForgotPassword(e) {
       .then(response => response.json())
       .then(data => {
         console.log("Password reset process initiated:", data);
+        if (data.success) {
+          showNotification(`🔑 A password reset link has been sent to ${email}.`);
+          //show login tab
+          document.getElementById('forgot-password-email').value = '';
+          document.getElementById('signin-name').value = email;
+          document.getElementById('signin-password').value = '';
+          $('[href="#signin"]').tab('show');
+        } else {
+          showNotification(`❌ Error: ${data.message}`);
+        }
       })
       .catch(error => {
         console.error("Error initiating password reset:", error);
@@ -268,60 +287,66 @@ function handleForgotPassword(e) {
 }
 
 function showNotification(message) {
-  const notification = document.getElementById('cart-notification');
-  notification.innerText = message;
+  const notification = document.getElementById('notification');
+  const messageSpan = document.getElementById('notification-message');
+
+  messageSpan.innerText = message;
+  notification.classList.add('show');
   notification.style.display = 'block';
 
   setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => {
       notification.style.display = 'none';
-  }, 2500);
+    }, 700); // match transition time
+  }, 3000);
 }
 
 function deleteCartItem(productId, card) {
   showNotification(`☠️ A sacrifice has been undone.`);
   fetch('/cart/delete', {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ product_id: productId })
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ product_id: productId })
   })
-      .then(response => response.json())
-      .then(data => {
-          if (data.success) {
-              card.remove();
-              updateCartSummary(); // Update the summary after item removal
-          } else {
-              console.error("Failed to delete item:", data.message);
-          }
-      })
-      .catch(err => console.error("Error deleting item:", err));
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        card.remove();
+        updateCartSummary(); // Update the summary after item removal
+      } else {
+        console.error("Failed to delete item:", data.message);
+      }
+    })
+    .catch(err => console.error("Error deleting item:", err));
 }
 
 function updateCartQuantity(productId, action, card) {
   console.log(action);
   if (action === 'increase') {
-      showNotification(`🦑 The tendrils accept your offering.`);
+    showNotification(`🦑 The tendrils accept your offering.`);
   }
   else if (action === 'decrease') {
-      showNotification(`☠️ A sacrifice has been undone.`);
+    showNotification(`☠️ A sacrifice has been undone.`);
   }
   fetch('/update_cart', {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-          product_id: productId,
-          action: action
-      })
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      product_id: productId,
+      action: action
+    })
   })
-      .then(response => response.json())
-      .then(data => {
-          card.querySelector('.quantity').textContent = data.new_quantity;
-          updateCartSummary(); // Update the summary after quantity change
-      })
-      .catch(err => console.error('Update failed:', err));
+    .then(response => response.json())
+    .then(data => {
+      card.querySelector('.quantity').textContent = data.new_quantity;
+      updateCartSummary(); // Update the summary after quantity change
+    })
+    .catch(err => console.error('Update failed:', err));
 }
 
 // Handle checkout button click
@@ -333,13 +358,32 @@ function proceedToCheckout() {
 function updateCartSummary() {
   let subtotal = 0;
   document.querySelectorAll('.cart-card').forEach(card => {
-      let price = parseFloat(card.querySelector('.price').textContent.replace('$', ''));
-      let quantity = parseInt(card.querySelector('.quantity').textContent);
-      subtotal += price * quantity;
+    let price = parseFloat(card.querySelector('.price').textContent.replace('$', ''));
+    let quantity = parseInt(card.querySelector('.quantity').textContent);
+    subtotal += price * quantity;
   });
   document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
   let shipping = 5.00; // Default shipping cost
   let total = subtotal + shipping;
   document.getElementById('shipping').textContent = `$${shipping.toFixed(2)}`;
   document.getElementById('total').textContent = `$${total.toFixed(2)}`;
+}
+
+if (!localStorage.getItem("player_id")) {
+  localStorage.setItem("player_id", crypto.randomUUID());
+}
+
+function submitSolution(uuid) {
+  const player_id = sessionStorage.getItem("player_id");
+
+  fetch(`/api/solve/${uuid}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_id: player_id })
+  })
+  .then(res => res.json())
+  .then(data => {
+      alert(data.message);
+      loadChallenges();
+  });
 }

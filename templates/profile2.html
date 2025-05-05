@@ -1,0 +1,197 @@
+<!--DO NOT PUSH TO PROD! THIS PAGE IS BROKEN. NEW FEATURE CAUSED OUR SERVER TO MAKE A LOT OF WEIRD REQUESTS-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>My Profile - Tentacle and Throw</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/index.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+    <style>
+        /* [Same styles you already had, untouched for brevity] */
+        .profile-container { margin-top: 50px; max-width: 800px; background-color: #f5f5f0; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); }
+        .profile-header { text-align: center; margin-bottom: 30px; }
+        .tentacle-divider { width: 100px; height: 10px; background: url('/static/assets/images/tentacle_divider.png') no-repeat center; background-size: contain; margin: 20px auto; }
+        .profile-picture-container { position: relative; display: inline-block; margin-bottom: 15px; }
+        #profile-picture { max-width: 150px; margin-bottom: 10px; cursor: pointer; }
+        .camera-overlay { position: absolute; bottom: 8px; right: 8px; background: rgba(0, 0, 0, 0.6); color: white; border-radius: 50%; padding: 6px; font-size: 14px; pointer-events: none; }
+    </style>
+</head>
+
+<body>
+<main>
+    {% include '_navbar.html' %}
+    {% include '_notification.html' %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <div class="profile-container" id="profile-container">
+                    <div class="profile-header">
+                        <h1 id="user-full-name">Welcome, [Loading...]</h1>
+                        <p class="lead">Watcher of the Waves • Dreamer in the Deep</p>
+                        <div class="tentacle-divider"></div>
+                    </div>
+
+                    <div id="profile-update-message"></div>
+
+                    <div class="row">
+                        <div class="col-md-6 text-center">
+                            <!-- Profile Picture Upload Section -->
+                            <div class="profile-picture-container">
+                                <img id="profile-picture" src="/static/profile_pics/default.png" alt="Profile Picture" class="img-thumbnail">
+                                <div class="camera-overlay"><span class="glyphicon glyphicon-camera"></span></div>
+                            </div>
+                            <input type="file" id="upload-picture" class="form-control" style="display: none;">
+
+                            <div class="profile-field text-center">
+                                <label for="upload-url">or provide a URL:</label>
+                                <div class="input-group" style="max-width: 400px; margin: 0 auto;">
+                                    <input type="text" id="upload-url" class="form-control" placeholder="http://127.0.0.1:8000/internal/admin">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-default" id="submit-url-upload" type="button">Fetch</button>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <h3 class="text-left">Your Details</h3>
+
+                            <!-- [User details: email, address, card info... kept as-is] -->
+
+                        </div>
+
+                        <div class="col-md-6">
+                            <h3>Account Actions</h3>
+                            <a href="/logout" class="btn btn-danger btn-block">Logout</a>
+                            <button class="btn btn-primary btn-block" id="email-profile-btn">Email My Profile</button>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h2>Your Past Orders</h2>
+                    <div id="orders-container"><p>[Loading orders...]</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+$(document).ready(function () {
+    function maskCardNumber(cardNumber) {
+        if (!cardNumber || cardNumber.length < 4) return cardNumber;
+        return '**** **** **** ' + cardNumber.toString().slice(-4);
+    }
+
+    function loadProfile() {
+        $.getJSON('/api/profile', function (data) {
+            $('#user-full-name').text('Welcome, ' + (data.username || 'User') + '!');
+            sessionStorage.setItem('username', data.username || '');
+
+            $('#user-email-display').text(data.email || 'Not provided');
+            $('#edit-email-input').val(data.email || '');
+
+            $('#user-shipping_address-display').html((data.shipping_address || 'Not provided').replace(/\n/g, '<br>'));
+            $('#edit-shipping_address-input').val(data.shipping_address || '');
+
+            $('#user-billing_address-display').html((data.billing_address || 'Not provided').replace(/\n/g, '<br>'));
+            $('#edit-billing_address-input').val(data.billing_address || '');
+
+            $('#user-card_number-display').text(data.card_number ? maskCardNumber(data.card_number) : 'Not provided');
+            $('#edit-card_number-input').val(data.card_number || '');
+
+            $('#user-card_expiration-display').text(data.card_expiration || 'Not provided');
+            $('#edit-card_expiration-input').val(data.card_expiration || '');
+
+            $('#profile-picture').attr('src', data.profile_picture || '/static/profile_pics/default.png');
+        });
+    }
+
+    function loadOrders() {
+        $.getJSON('/api/orders', function (data) {
+            if (data.length === 0) {
+                $('#orders-container').html('<p>You have not placed any orders yet.</p>');
+            } else {
+                let html = '';
+                data.forEach(order => {
+                    html += `<div class="order-card">
+                                <h4>Order #${order.id} - ${order.status}</h4>
+                                <ul>${order.items.map(i => `<li>${i.quantity}x ${i.product_name}</li>`).join('')}</ul>
+                                <p><strong>Total:</strong> $${order.total.toFixed(2)}</p>
+                             </div>`;
+                });
+                $('#orders-container').html(html);
+            }
+        });
+    }
+
+    $('#profile-picture').on('click', function () {
+        $('#upload-picture').click();
+    });
+
+    $('#upload-picture').on('change', function () {
+        const fileInput = this;
+        if (!fileInput.files.length) return;
+
+        const formData = new FormData();
+        formData.append('picture', fileInput.files[0]);
+
+        $.ajax({
+            url: '/api/profile/picture',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function () {
+                const filename = fileInput.files[0].name;
+                const username = sessionStorage.getItem('username');
+                $('#profile-picture').attr('src', `/static/profile_pics/${username}/${filename}`);
+                $('#profile-update-message').html('<div class="alert alert-success">Picture uploaded!</div>');
+            },
+            error: function () {
+                $('#profile-update-message').html('<div class="alert alert-danger">Upload failed.</div>');
+            }
+        });
+    });
+
+    $('#submit-url-upload').on('click', function () {
+        const imageUrl = $('#upload-url').val().trim();
+        if (!imageUrl || !/^https?:\/\/.+/i.test(imageUrl)) {
+            $('#profile-update-message').html('<div class="alert alert-danger">Invalid URL.</div>');
+            return;
+        }
+
+        $.ajax({
+            url: '/api/profile/picture',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ url: imageUrl }),
+            success: function () {
+                const filename = imageUrl.split('/').pop().split('?')[0];
+                const username = sessionStorage.getItem('username');
+                $('#profile-picture').attr('src', `/static/profile_pics/${username}/${filename}`);
+                $('#profile-update-message').html('<div class="alert alert-success">Image fetched!</div>');
+            },
+            error: function () {
+                $('#profile-update-message').html('<div class="alert alert-danger">Failed to fetch image.</div>');
+            }
+        });
+    });
+
+    $('#email-profile-btn').click(function () {
+        $.get('/api/profile/email', function () {
+            $('#profile-update-message').html('<div class="alert alert-success">Profile emailed successfully!</div>');
+        }).fail(function () {
+            $('#profile-update-message').html('<div class="alert alert-danger">Failed to email profile.</div>');
+        });
+    });
+
+    loadProfile();
+    loadOrders();
+});
+</script>
+</body>
+</html>

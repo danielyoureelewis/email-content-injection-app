@@ -16,6 +16,8 @@
         .product-image {
             width: 100%;
             border-radius: 10px;
+            object-fit: contain;
+            max-height: 600px;
         }
 
         .action-buttons {
@@ -41,6 +43,7 @@
                 transform: scale(1) rotate(0deg);
             }
         }
+
         @keyframes vanishToTheAbyss {
             from {
                 opacity: 1;
@@ -77,13 +80,14 @@
         .eldritch-notification.hide {
             animation: vanishToTheAbyss 0.5s ease-in forwards;
         }
-        
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet">
 </head>
 
 <body>
     {% include '_navbar.html' %}
+    {% include '_notification.html' %}
+
     <div id="cart-notification" class="eldritch-notification">
         <p id="cart-notification-text"></p>
     </div>
@@ -94,9 +98,12 @@
 
     <div class="container product-container">
         <div class="row">
+            <!-- Product Image -->
             <div class="col-sm-6">
                 <img src="{{ product.image }}" alt="{{ product.name }}" class="product-image">
             </div>
+
+            <!-- Product Info -->
             <div class="col-sm-6">
                 <h2>{{ product.name }}</h2>
                 <p><strong>Price:</strong> ${{ product.price }}</p>
@@ -105,13 +112,79 @@
                 <div class="action-buttons">
                     <button class="btn btn-success" onclick="addToCart(event, {{ product.id }})"
                         aria-label="Add {{ product.name }} to cart">Add to Cart</button>
-                    
                 </div>
+            </div>
+        </div>
+
+        <!-- Comments Section BELOW everything -->
+        <div class="row" style="margin-top: 50px;">
+            <div class="col-sm-12">
+                <hr>
+                <h3 style="font-family: 'Creepster', cursive;">Whisper Your Thoughts</h3>
+
+
+
+                <!-- Display Comments -->
+                <div class="existing-comments">
+                    {% if comments %}
+                    {% for comment in comments %}
+                    <div
+                        style="border: 1px solid #5A4AB0; padding: 15px; margin-bottom: 20px; border-radius: 8px; background: #333333; color: #EAE7DC;">
+                        <strong>{{ comment.name }}</strong> whispered:<br>
+                        <p style="margin-top: 10px;">{{ comment.text | safe }}</p>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p style="color: #999;">No whispers yet... Be the first to speak from the void.</p>
+                    {% endif %}
+                </div>
+                <!-- Comment Form -->
+                <form action="/product/{{ product.id }}" method="POST" style="margin-bottom: 30px;">
+                    <div class="form-group">
+                        <label for="commenter_name">Your Name:</label>
+                        <input type="text" class="form-control" id="commenter_name" name="commenter_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="comment_text">Your Comment:</label>
+                        <textarea class="form-control" id="comment_text" name="comment_text" rows="4"
+                            required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Summon Comment</button>
+                </form>
             </div>
         </div>
     </div>
 
+    <script>
+        window.addEventListener("DOMContentLoaded", function () {
+            // Listen for any attempt by a malicious payload to call window.reportXSS
+            window.reportXSS = function (payloadInfo) {
+                fetch('/api/solve/e0529936-76bb-410f-8ef4-b913624a3c4d', {
+                    method: 'POST'
+                });
+            };
+        });
+    </script>
+
+
     <script src="/static/index.js"></script>
+    <script>
+        (function () {
+            const player = localStorage.getItem("player_id");
+            const originalAlert = window.alert;
+            window.alert = function (msg) {
+                originalAlert(msg);
+                fetch('/api/solve/e0529936-76bb-410f-8ef4-b913624a3c4d', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ player_id: player })
+                });
+            };
+        })();
+    </script>
+
+
+
 </body>
 
 </html>

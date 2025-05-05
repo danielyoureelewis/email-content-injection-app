@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Thank You for Subscribing</title>
+    <style>
+        body {{
+            font-family: "Roboto", sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            background-color: #F5F5F0;
+            margin: 0;
+            padding: 0;
+        }}
+        .container {{
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 30px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #EAE7DC;
+        }}
+        .header h2 {{
+            color: #5A4AB0;
+            margin-bottom: 10px;
+        }}
+        .content {{
+            padding: 20px 0;
+        }}
+        .button {{
+            display: inline-block;
+            background-color: #5A4AB0;
+            color: #EAE7DC;
+            padding: 10px 15px;
+            text-decoration: none;
+            border-radius: 24px;
+            margin: 15px 0;
+            text-align: center;
+            min-width: 150px;
+        }}
+        .button:hover {{
+            background-color: #333333;
+        }}
+        .footer {{
+            margin-top: 30px;
+            padding-top: 15px;
+            font-size: 0.9em;
+            color: #333333;
+            border-top: 1px solid #EAE7DC;
+            background-color: #EAE7DC;
+            padding: 15px;
+            border-radius: 5px;
+        }}
+        a {{
+            color: #5A4AB0;
+            text-decoration: none;
+        }}
+        a:hover {{
+            color: #333333;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Welcome to Tentacle & Throw!</h2>
+        </div>
+        
+        <div class="content">
+            <p>Dear {username},</p>
+
+            <p>Thank you for subscribing to the Tentacle & Throw newsletter!</p>
+
+            <p>We're thrilled to have you join our growing community. You'll now receive the latest product launches, special offers, and the occasional eldritch revelation straight to your inbox.</p>
+
+            <p>If at any point you'd prefer not to receive these updates, simply click the button below to unsubscribe:</p>
+
+            <div style="text-align: center;">
+                <a href="http://{request.host}/unsubscribe?email={email_encoded}" class="button">Unsubscribe</a>
+            </div>
+
+            <p style="font-size: 0.9em;">Alternatively, you can copy and paste this link into your browser:<br>
+            <a href="http://{request.host}/unsubscribe?email={email_encoded}">http://{request.host}/unsubscribe?email={email_encoded}</a></p>
+
+            <p>Have questions or feedback? Feel free to visit our <a href="http://{request.host}/contact">Contact Page</a>.</p>
+        </div>
+        
+        <div class="footer">
+            <p>You are receiving this email because you subscribed to updates from Tentacle & Throw. If this was a mistake, you can <a href="http://{request.host}/unsubscribe?email={email_encoded}">unsubscribe here</a> or reach out to us.</p>
+
+            <p>For more information, please see our <a href="http://{request.host}/terms">Terms</a> and <a href="http://{request.host}/privacy">Privacy Policy</a>.</p>
+
+            <p style="font-size: 0.8em;">This is an automated message. Please do not reply to this email directly.</p>
+        </div>
+    </div>
+</body>
+</html>

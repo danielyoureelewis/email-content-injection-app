@@ -5,11 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cart - Tenticle and Throw</title>
+
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <style> 
+    <link rel="stylesheet" href="/static/css/index.css">
+
+    <style>
         #cart-list {
             column-count: 3;
             column-gap: 20px;
@@ -60,41 +64,6 @@
         .checkout-sidebar {
             position: fixed;
             right: 0;
-            bottom: 20px;
-            width: 300px;
-            padding: 20px;
-            border: 1px solid #ddd;
-            background-color: #f9f9f9;
-            border-radius: 10px;
-        }
-
-        .checkout-sidebar h4 {
-            margin-top: 0;
-        }
-
-        .checkout-sidebar .total-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-
-        .checkout-btn {
-            font-size: 24px;
-            background-color: #5A4AB0;
-            color: white;
-            padding: 15px;
-            width: 100%;
-            border: none;
-            cursor: pointer;
-            border-radius: 10px;
-        }
-
-        .checkout-btn:hover {
-            background-color: #3A3492;
-        }
-
-        .checkout-sidebar {
-            right: 0;
             top: 90px;
             width: 20vw;
             padding: 20px;
@@ -115,23 +84,30 @@
         .checkout-form textarea {
             width: 100%;
         }
+
+        /* Error Message Styling */
+        .fade-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 12px 16px;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 16px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .fade-error.show {
+            opacity: 1;
+        }
     </style>
-    
-    <link rel="stylesheet" href="/static/css/index.css">
 </head>
 
 <body>
     <main>
         {% include '_navbar.html' %}
-        
-        <div id="cart-notification" class="eldritch-notification">
-            <p id="cart-notification-text"></p>
-        </div>
-    
-        <div id="cart-notification"
-            style="display:none; position:fixed; top:20px; right:20px; background-color:#333; color:white; padding:15px 20px; border-radius:8px; z-index:1000; box-shadow: 0 0 10px rgba(0,0,0,0.3);">
-        </div>
-
+        {% include '_notification.html' %}
         <div class="container">
             <h2 id="heading" class="text-center">Your Cart</h2>
             <div class="row" id="cart-list"></div>
@@ -146,28 +122,25 @@
             </div>
             <div class="total-row">
                 <span>Shipping:</span>
-                <span id="shipping">$5.00</span> <!-- Default shipping cost, can be updated dynamically -->
+                <span id="shipping">$5.00</span>
             </div>
             <div class="total-row">
                 <span><strong>Total:</strong></span>
-                <span id="total">$5.00</span> <!-- Default total cost, can be updated dynamically -->
+                <span id="total">$5.00</span>
             </div>
 
-            <!-- Checkout Form -->
             <h4>Shipping & Payment</h4>
             <form id="payment-form" class="checkout-form">
-                <!-- Shipping Address -->
                 <div class="form-group">
                     <label for="shipping-address">Shipping Address</label>
                     <textarea id="shipping-address" class="form-control" rows="3" required></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label for="billing_address">Billing Address</label>
+                    <label for="billing-address">Billing Address</label>
                     <textarea id="billing-address" class="form-control" rows="3" required></textarea>
                 </div>
 
-                <!-- Credit Card Details -->
                 <div class="form-group">
                     <label for="card-number">Credit Card Number</label>
                     <input type="text" id="card-number" class="form-control" placeholder="Card Number" required>
@@ -183,11 +156,14 @@
                     <input type="text" id="cvv" class="form-control" placeholder="CVV" required>
                 </div>
 
-                <!-- Submit Button -->
                 <button type="submit" class="checkout-btn">Complete Purchase</button>
             </form>
-        </div>
 
+            <!-- Error Message -->
+            <div id="checkout-error" class="fade-error" style="display:none;">
+                <p id="checkout-error-text"></p>
+            </div>
+        </div>
     </main>
 
     <footer class="container-fluid text-center">
@@ -199,149 +175,285 @@
                 <button type="button" class="btn btn-danger" onclick="handleSignUP(event)">Sign Up</button>
             </form>
         </div>
+    </footer>
 
-        <script>
-            // Function to fetch cart contents from the API
-            document.addEventListener('DOMContentLoaded', function () {
-                loadProfileForCheckout();
-                fetch('/cart')
-                    .then(response => response.json())
-                    .then(data => {
-                        // Check if the cart is empty
-                        if (data.length === 0) {
-                            //change the heading
-                            document.getElementById('heading').textContent = "Your Cart is Empty";
-                            return;
-                        }
-                        let cartList = document.getElementById('cart-list');
-                        let subtotal = 0;
-                        data.forEach(cart => {
-                            subtotal += cart.price * cart.quantity; // Calculate subtotal
-                            // Create a card for each item in the cart              
-                            let cartCard = `
-        <div class="cart-card" data-product-id="${cart.product_id}">
-            <img src="${cart.image}" alt="${cart.name}">
-            <h4>${cart.name}</h4>
-            <p class="price">$${cart.price}</p>
-            <div class="quantity-controls" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <button class="btn btn-default btn-xs update-qty" data-action="decrease">−</button>
-                    <span class="quantity">${cart.quantity}</span>
-                    <button class="btn btn-default btn-xs update-qty" data-action="increase">+</button>
-                </div>
-                <button class="btn btn-danger btn-xs remove-item">Remove</button>
-            </div>
-        </div>
-`;
+    <script>
+        // Input restrictions
+        document.getElementById('card-number').addEventListener('input', function (e) {
+            // Allow only numbers
+            this.value = this.value.replace(/[^\d]/g, '');
+        });
 
-                            cartList.innerHTML += cartCard;
+        document.getElementById('cvv').addEventListener('input', function (e) {
+            // Allow only 3-4 digits
+            this.value = this.value.replace(/[^\d]/g, '').slice(0, 4);
+        });
 
-                            // Update quantities
-                            cartList.querySelectorAll('.update-qty').forEach(button => {
-                                button.addEventListener('click', function () {
-                                    const card = this.closest('.cart-card');
-                                    const productId = card.getAttribute('data-product-id');
-                                    const action = this.getAttribute('data-action');
-                                    updateCartQuantity(productId, action, card);
-                                });
-                            });
-                            cartList.querySelectorAll('.remove-item').forEach(button => {
-                                button.addEventListener('click', function () {
-                                    const card = this.closest('.cart-card');
-                                    const productId = card.getAttribute('data-product-id');
-                                    deleteCartItem(productId, card);
-                                });
-                            });
-                        });
+        document.getElementById('expiration-date').addEventListener('input', function (e) {
+            // Force MM/YY format, numbers and slash only
+            let input = this.value.replace(/[^\d]/g, '');
+            if (input.length >= 3) {
+                input = input.slice(0, 2) + '/' + input.slice(2, 4);
+            }
+            this.value = input.slice(0, 5);
+        });
+        document.addEventListener('DOMContentLoaded', function () {
+            loadProfileForCheckout();
 
-                        // Update the total price
-                        document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
-                        let shipping = 5.00; // Default shipping cost
-                        let total = subtotal + shipping;
-                        document.getElementById('shipping').textContent = `$${shipping.toFixed(2)}`;
-                        document.getElementById('total').textContent = `$${total.toFixed(2)}`;
-                    })
-                    .catch(error => {
-                        console.error('Error fetching cart contents:', error);
+            fetch('/cart')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length === 0) {
+                        document.getElementById('heading').textContent = "Your Cart is Empty";
+                        return;
+                    }
+                    let cartList = document.getElementById('cart-list');
+                    let subtotal = 0;
+                    data.forEach(cart => {
+                        subtotal += cart.price * cart.quantity;
+                        let cartCard = `
+                            <div class="cart-card" data-product-id="${cart.product_id}">
+                                <img src="${cart.image}" alt="${cart.name}">
+                                <h4>${cart.name}</h4>
+                                <p class="price">$${cart.price}</p>
+                                <div class="quantity-controls" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                                    <div style="display: flex; align-items: center; gap: 5px;">
+                                        <button class="btn btn-default btn-xs update-qty" data-action="decrease">−</button>
+                                        <span class="quantity">${cart.quantity}</span>
+                                        <button class="btn btn-default btn-xs update-qty" data-action="increase">+</button>
+                                    </div>
+                                    <button class="btn btn-danger btn-xs remove-item">Remove</button>
+                                </div>
+                            </div>
+                        `;
+                        cartList.innerHTML += cartCard;
                     });
-            });
 
-            // Handle form submission for checkout
-            document.getElementById('payment-form').addEventListener('submit', function (e) {
-                e.preventDefault(); // Prevent the form from submitting and redirecting
-                console.log("here");
-                // Collect form data
-                const shippingAddress = document.getElementById('shipping-address').value;
-                const billinngAddress = document.getElementById('billing-address').value;
-                const cardNumber = document.getElementById('card-number').value;
-                const expirationDate = document.getElementById('expiration-date').value;
-                const cvv = document.getElementById('cvv').value;
-                
-                // Prepare data for the POST request
-                const data = {
-                    shipping_address: shippingAddress,
-                    billing_address: billinngAddress,
-                    card_number: cardNumber,
-                    expiration_date: expirationDate,
-                    cvv: cvv
-                };
-                console.log(data);
-                // Send the data to the server (POST request)
-                fetch('/checkout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
+                    cartList.querySelectorAll('.update-qty').forEach(button => {
+                        button.addEventListener('click', function () {
+                            let card = this.closest('.cart-card');
+                            let productId = card.getAttribute('data-product-id');
+                            let action = this.getAttribute('data-action');
+                            updateCartQuantity(productId, action, card);
+                        });
+                    });
+
+                    cartList.querySelectorAll('.remove-item').forEach(button => {
+                        button.addEventListener('click', function () {
+                            let card = this.closest('.cart-card');
+                            let productId = card.getAttribute('data-product-id');
+                            deleteCartItem(productId, card);
+                        });
+                    });
+
+                    document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
+                    let shipping = 5.00;
+                    let total = subtotal + shipping;
+                    document.getElementById('shipping').textContent = `$${shipping.toFixed(2)}`;
+                    document.getElementById('total').textContent = `$${total.toFixed(2)}`;
                 })
+                .catch(error => {
+                    console.error('Error fetching cart contents:', error);
+                });
+        });
+
+        let realCardNumber = '';
+        let programmaticallySettingCard = false; // <-- new flag
+
+        function loadProfileForCheckout() {
+            fetch('/api/profile')
+                .then(response => response.json())
+                .then(profile => {
+                    document.getElementById('shipping-address').value = profile.shipping_address || '';
+                    document.getElementById('billing-address').value = profile.billing_address || '';
+                    document.getElementById('expiration-date').value = profile.card_expiration || '';
+
+                    if (profile.card_number) {
+                        realCardNumber = profile.card_number;
+                        let last4 = realCardNumber.toString().slice(-4);
+
+                        // Temporarily disable the input event
+                        programmaticallySettingCard = true;
+                        document.getElementById('card-number').value = `**** **** **** ${last4}`;
+                        programmaticallySettingCard = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading profile for checkout:', error);
+                });
+        }
+
+        // Input handling for card number
+        document.getElementById('card-number').addEventListener('input', function (e) {
+            if (programmaticallySettingCard) {
+                return; // If we are setting programmatically, ignore
+            }
+
+            let current = this.value.replace(/[^\d]/g, '');
+
+            if (current.length > 0) {
+                // User typed something manually → update realCardNumber
+                realCardNumber = current;
+                this.value = current; // Remove masking while user is typing
+            } else if (this.value.includes('*')) {
+                // still masked, ignore
+            } else {
+                realCardNumber = '';
+            }
+        });
+
+
+
+        function maskCardNumber(cardNumber) {
+            if (!cardNumber || cardNumber.length < 4) return cardNumber;
+            let last4 = cardNumber.toString().slice(-4);
+            return `**** **** **** ${last4}`;
+        }
+
+        document.getElementById('payment-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!validateCheckoutForm()) {
+                return;
+            }
+            console.log("Validation passed, proceeding to checkout...");
+
+            let shippingAddress = document.getElementById('shipping-address').value;
+            let billingAddress = document.getElementById('billing-address').value;
+            let cardNumber = document.getElementById('card-number').value;
+            let expirationDate = document.getElementById('expiration-date').value;
+            let cvv = document.getElementById('cvv').value;
+
+            let data = {
+                shipping_address: shippingAddress,
+                billing_address: billingAddress,
+                card_number: cardNumber,
+                expiration_date: expirationDate,
+                cvv: cvv
+            };
+
+            fetch('/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.message === 'Checkout successful!') {
-                        showCartNotification(`🦑 Thank you for your order`);
-                        //clear the cart
+                        showNotification(`🦑 Thank you for your order`);
                         document.getElementById('cart-list').innerHTML = '';
-                        //reset checkout form
                         document.getElementById('shipping-address').value = '';
                         document.getElementById('billing-address').value = '';
                         document.getElementById('card-number').value = '';
                         document.getElementById('expiration-date').value = '';
                         document.getElementById('cvv').value = '';
-                        //reset total
                         document.getElementById('subtotal').textContent = `$0.00`;
                         document.getElementById('shipping').textContent = `$0.00`;
                         document.getElementById('total').textContent = `$0.00`;
+                        hideCheckoutError();
                     } else {
-                        showCartNotification("There was an issue with your payment. Please try again.");
+                        showCheckoutError("There was an issue with your payment. Please try again.");
                     }
                 })
                 .catch(error => {
                     console.error('Error during checkout:', error);
-                    alert("An error occurred. Please try again.");
+                    showCheckoutError("An error occurred. Please try again.");
                 });
-            });
-
-            // Load user profile and pre-fill checkout fields
-function loadProfileForCheckout() {
-    fetch('/api/profile')
-        .then(response => response.json())
-        .then(profile => {
-            document.getElementById('shipping-address').value = profile.shipping_address || '';
-            document.getElementById('billing-address').value = profile.billing_address || '';
-            document.getElementById('card-number').value = maskCardNumber(profile.card_number) || '';
-            document.getElementById('expiration-date').value = profile.card_expiration || '';
-        })
-        .catch(error => {
-            console.error('Error loading profile for checkout:', error);
         });
-}
 
-function maskCardNumber(cardNumber) {
-    if (!cardNumber || cardNumber.length < 4) return cardNumber;
-    const last4 = cardNumber.toString().slice(-4);
-    return `**** **** **** ${last4}`;
-}
-        </script>
-        <script src="{{ url_for('static', filename='index.js') }}"></script>
+        function validateCheckoutForm() {
+            let shippingAddress = document.getElementById('shipping-address').value.trim();
+            let billingAddress = document.getElementById('billing-address').value.trim();
+            let cardNumber = document.getElementById('card-number').value.trim().replace(/\s+/g, '');
+            let expirationDate = document.getElementById('expiration-date').value.trim();
+            let cvv = document.getElementById('cvv').value.trim();
+
+            hideCheckoutError();
+
+            //if card number is masked, use the real card number
+            if (cardNumber.includes('*')) {
+                cardNumber = realCardNumber;
+            }
+
+            if (!shippingAddress) {
+                showCheckoutError('Please enter a shipping address.');
+                return false;
+            }
+            if (!billingAddress) {
+                showCheckoutError('Please enter a billing address.');
+                return false;
+            }
+            if (!/^\d{13,19}$/.test(cardNumber)) {
+                showCheckoutError('Please enter a valid credit card number (13–19 digits).');
+                return false;
+            }
+            if (!luhnCheck(cardNumber)) {
+                showCheckoutError('The credit card number you entered is invalid.');
+                return false;
+            }
+            if (!/^\d{2}\/\d{2}$/.test(expirationDate)) {
+                showCheckoutError('Expiration date must be in MM/YY format.');
+                return false;
+            }
+            if (!validateExpirationDate(expirationDate)) {
+                showCheckoutError('The card appears to be expired.');
+                return false;
+            }
+            if (!/^\d{3,4}$/.test(cvv)) {
+                showCheckoutError('CVV must be 3 or 4 digits.');
+                return false;
+            }
+
+            return true;
+        }
+
+        function showCheckoutError(message) {
+            let errorDiv = document.getElementById('checkout-error');
+            let errorText = document.getElementById('checkout-error-text');
+            errorText.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.classList.add('show');
+            }, 10);
+        }
+
+        function hideCheckoutError() {
+            let errorDiv = document.getElementById('checkout-error');
+            errorDiv.classList.remove('show');
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 500);
+        }
+
+        function luhnCheck(num) {
+            let arr = (num + '')
+                .split('')
+                .reverse()
+                .map(x => parseInt(x));
+            let sum = arr.reduce((acc, val, idx) => {
+                if (idx % 2) {
+                    val *= 2;
+                    if (val > 9) val -= 9;
+                }
+                return acc + val;
+            }, 0);
+            return sum % 10 === 0;
+        }
+
+        function validateExpirationDate(exp) {
+            let [month, year] = exp.split('/').map(str => parseInt(str, 10));
+            if (month < 1 || month > 12) return false;
+
+            let now = new Date();
+            let currentYear = now.getFullYear() % 100;
+            let currentMonth = now.getMonth() + 1;
+
+            if (year < currentYear) return false;
+            if (year === currentYear && month < currentMonth) return false;
+
+            return true;
+        }
+    </script>
+    <script src="{{ url_for('static', filename='index.js') }}"></script>
 </body>
 
 </html>

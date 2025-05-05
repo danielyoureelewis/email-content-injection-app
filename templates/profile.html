@@ -5,10 +5,8 @@
     <title>My Profile - Tentacle and Throw</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/css/index.css">
-
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
 
@@ -52,24 +50,6 @@
             gap: 6px;
         }
 
-        .profile-value span,
-        .profile-edit-container,
-        .profile-value button {
-            margin-bottom: 0;
-        }
-
-        .profile-value input,
-        .profile-value textarea {
-            flex: 0 0 auto;
-            width: auto;
-            min-width: 150px;
-            max-width: 250px;
-            height: 30px;
-            line-height: 1.2;
-            padding: 4px 6px;
-            font-size: 14px;
-        }
-
         .edit-btn {
             padding: 0;
             font-size: 12px;
@@ -87,10 +67,6 @@
             justify-content: center;
         }
 
-        .edit-btn:hover {
-            color: #5A4AB0;
-        }
-
         .order-card {
             background-color: white;
             padding: 15px;
@@ -102,17 +78,45 @@
         #profile-update-message {
             margin-top: 10px;
         }
+
+        .profile-picture-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        #profile-picture {
+            max-width: 150px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 50%;
+            padding: 6px;
+            font-size: 14px;
+            pointer-events: none;
+        }
+
+        .profile-picture-container {
+            margin-bottom: 15px;
+            display: inline-block;
+        }
     </style>
 </head>
 
 <body>
     <main>
         {% include '_navbar.html' %}
+        {% include '_notification.html' %}
 
         <div class="container">
             <div class="row">
                 <div class="col-md-8 col-md-offset-2">
-
                     <div class="profile-container">
                         <div class="profile-header">
                             <h1 id="user-full-name">Welcome, [Loading...]</h1>
@@ -124,9 +128,20 @@
 
                         <div class="row">
                             <div class="col-md-6">
+                                <!-- Profile Picture Upload -->
+                                <div class="profile-field text-center">
+                                    <div class="profile-picture-container">
+                                        <img id="profile-picture" src="/static/profile_pics/default.png"
+                                            alt="Profile Picture" class="img-thumbnail">
+                                        <div class="camera-overlay">
+                                            <span class="glyphicon glyphicon-camera"></span>
+                                        </div>
+                                    </div>
+                                    <input type="file" id="upload-picture" class="form-control" style="display: none;">
+                                </div>
+
                                 <h3>Your Details</h3>
 
-                                <!-- Email -->
                                 <div class="profile-field">
                                     <strong>Email:</strong>
                                     <div class="profile-value">
@@ -143,7 +158,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Shipping Address -->
                                 <div class="profile-field">
                                     <strong>Shipping Address:</strong>
                                     <div class="profile-value">
@@ -162,7 +176,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Billing Address -->
                                 <div class="profile-field">
                                     <strong>Billing Address:</strong>
                                     <div class="profile-value">
@@ -181,7 +194,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Card Number -->
                                 <div class="profile-field">
                                     <strong>Card Number:</strong>
                                     <div class="profile-value">
@@ -200,7 +212,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Card Number -->
                                 <div class="profile-field">
                                     <strong>Card Expiration:</strong>
                                     <div class="profile-value">
@@ -218,12 +229,13 @@
                                             title="Edit">✏️</button>
                                     </div>
                                 </div>
-
                             </div>
 
                             <div class="col-md-6">
                                 <h3>Account Actions</h3>
                                 <a href="/logout" class="btn btn-danger btn-block">Logout</a>
+                                <button class="btn btn-primary btn-block" id="email-profile-btn">Email My
+                                    Profile</button>
                             </div>
                         </div>
 
@@ -234,31 +246,16 @@
                             <p>[Loading orders...]</p>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
     </main>
 
-    <footer class="container-fluid text-center">
-        <p>Tentacle and Throw Copyright</p>
-        <div class="container mt-4">
-            <form class="inline-form">
-                <label for="signUpEmail" class="mb-0">Signup to our newsletter to receive exclusive deals!</label>
-                <input id="signUpEmail" type="email" class="form-control" placeholder="Email Address">
-                <button type="button" class="btn btn-danger" onclick="handleSignUP(event)">Sign Up</button>
-            </form>
-        </div>
-    </footer>
-
-    <script src="/static/index.js"></script>
-
     <script>
         $(document).ready(function () {
             function maskCardNumber(cardNumber) {
                 if (!cardNumber || cardNumber.length < 4) return cardNumber;
-                const last4 = cardNumber.toString().slice(-4);
-                return '**** **** **** ' + last4;
+                return '**** **** **** ' + cardNumber.toString().slice(-4);
             }
 
             function resetFields() {
@@ -271,22 +268,34 @@
 
             function loadProfile() {
                 $.getJSON('/api/profile', function (data) {
-                    $('#user-full-name').text('Welcome, ' + data.username + '!');
+                    $('#user-full-name').text('Welcome, ' + (data.username || 'User') + '!');
+                    sessionStorage.setItem('username', data.username || '');
 
-                    $('#user-email-display').text(data.email);
-                    $('#edit-email-input').val(data.email);
+                    $('#user-email-display').text(data.email || 'Not provided');
+                    $('#edit-email-input').val(data.email || '');
 
-                    $('#user-shipping_address-display').html(data.shipping_address.replace(/\n/g, '<br>'));
-                    $('#edit-shipping_address-input').val(data.shipping_address);
+                    $('#user-shipping_address-display').html(
+                        (data.shipping_address || 'Not provided').replace(/\n/g, '<br>')
+                    );
+                    $('#edit-shipping_address-input').val(data.shipping_address || '');
 
-                    $('#user-billing_address-display').html(data.billing_address.replace(/\n/g, '<br>'));
-                    $('#edit-billing_address-input').val(data.billing_address);
+                    $('#user-billing_address-display').html(
+                        (data.billing_address || 'Not provided').replace(/\n/g, '<br>')
+                    );
+                    $('#edit-billing_address-input').val(data.billing_address || '');
 
-                    $('#user-card_number-display').text(maskCardNumber(data.card_number));
-                    $('#edit-card_number-input').val(data.card_number);
+                    $('#user-card_number-display').text(
+                        data.card_number ? maskCardNumber(data.card_number) : 'Not provided'
+                    );
+                    $('#edit-card_number-input').val(data.card_number || '');
 
-                    $('#user-card_expiration-display').text(data.card_expiration);
-                    $('#edit-card_expiration-input').val(data.card_expiration);
+                    $('#user-card_expiration-display').text(data.card_expiration || 'Not provided');
+                    $('#edit-card_expiration-input').val(data.card_expiration || '');
+
+                    $('#profile-picture').attr('src', data.profile_picture || '/static/profile_pics/default.png');
+
+                    $('#loading-indicator').hide(); // make sure you have a #loading-indicator element to hide
+                    $('#profile-container').show(); // make sure profile content container is visible
 
                     resetFields();
                 });
@@ -298,21 +307,91 @@
                         $('#orders-container').html('<p>You have not placed any orders yet.</p>');
                     } else {
                         let ordersHtml = '';
-                        data.forEach(function (order) {
+                        data.forEach(order => {
                             ordersHtml += `
-                        <div class="order-card">
-                            <h4>Order #${order.id} - ${order.status}</h4>
-                            <ul>
-                                ${order.items.map(item => `<li>${item.quantity}x ${item.product_name}</li>`).join('')}
-                            </ul>
-                            <p><strong>Total:</strong> $${order.total.toFixed(2)}</p>
-                        </div>
-                    `;
+                            <div class="order-card">
+                                <h4>Order #${order.id} - ${order.status}</h4>
+                                <ul>${order.items.map(item => `<li>${item.quantity}x ${item.product_name}</li>`).join('')}</ul>
+                                <p><strong>Total:</strong> $${order.total.toFixed(2)}</p>
+                            </div>`;
                         });
                         $('#orders-container').html(ordersHtml);
                     }
                 });
             }
+
+            function saveField(field) {
+                let newValue = $(`#edit-${field}-input, #edit-${field}-textarea`).val();
+                const payload = {};
+                if (field === 'card_number') newValue = newValue.replace(/\D/g, '');
+                payload[field] = newValue;
+
+                if (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newValue)) {
+                    $('#profile-update-message').html('<div class="alert alert-danger">Invalid email address.</div>');
+                    return;
+                }
+
+                if (field === 'card_number' && (newValue.length < 13 || newValue.length > 19 || !luhnCheck(newValue))) {
+                    $('#profile-update-message').html('<div class="alert alert-danger">Invalid card number.</div>');
+                    return;
+                }
+
+                if (field === 'card_expiration' && !/^(0[1-9]|1[0-2])\/\d{2}$/.test(newValue)) {
+                    $('#profile-update-message').html('<div class="alert alert-danger">Use MM/YY format.</div>');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/api/profile/update',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    success: () => {
+                        $('#profile-update-message').html('<div class="alert alert-success">Updated!</div>');
+                        loadProfile();
+                    },
+                    error: () => {
+                        $('#profile-update-message').html('<div class="alert alert-danger">Update failed.</div>');
+                        loadProfile();
+                    }
+                });
+            }
+
+            $('#profile-picture').on('click', function () {
+                $('#upload-picture').click();
+            });
+
+            $('#email-profile-btn').click(function () {
+                $.get('/api/profile/email', function () {
+                    $('#profile-update-message').html('<div class="alert alert-success">Profile emailed successfully!</div>');
+                }).fail(function () {
+                    $('#profile-update-message').html('<div class="alert alert-danger">Failed to email profile.</div>');
+                });
+            });
+
+            $('#upload-picture').on('change', function () {
+                const fileInput = this;
+                if (!fileInput.files.length) return;
+
+                const formData = new FormData();
+                formData.append('picture', fileInput.files[0]);
+
+                $.ajax({
+                    url: '/api/profile/picture',
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function () {
+                        $('#profile-update-message').html('<div class="alert alert-success">Picture updated!</div>');
+                        $('#profile-picture').attr('src', '/static/profile_pics/' + sessionStorage.getItem('username') + '/' + fileInput.files[0].name);
+                    },
+                    error: function () {
+                        $('#profile-update-message').html('<div class="alert alert-danger">Upload failed.</div>');
+                    }
+                });
+            });
+
 
             function showEdit(field) {
                 $(`#user-${field}-display`).hide();
@@ -326,60 +405,20 @@
                 $(`button[data-field="${field}"].edit-btn`).show();
             }
 
-            function saveField(field) {
-                let newValue = $(`#edit-${field}-input, #edit-${field}-textarea`).val();
-                const payload = {};
-
-                if (field === 'card_number') {
-                    newValue = newValue.replace(/\D/g, ''); // REMOVE ALL NON-DIGITS FIRST
-                }
-
-                payload[field] = newValue;
-
-                // Validation
-                if (field === 'email') {
-                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                    if (!emailRegex.test(newValue)) {
-                        $('#profile-update-message').html('<div class="alert alert-danger">Invalid email address.</div>');
-                        return;
+            function luhnCheck(cardNumber) {
+                let sum = 0;
+                let shouldDouble = false;
+                for (let i = cardNumber.length - 1; i >= 0; i--) {
+                    let digit = parseInt(cardNumber.charAt(i));
+                    if (shouldDouble) {
+                        digit *= 2;
+                        if (digit > 9) digit -= 9;
                     }
+                    sum += digit;
+                    shouldDouble = !shouldDouble;
                 }
-
-                if (field === 'card_number') {
-                    if (newValue.length < 13 || newValue.length > 19 || !luhnCheck(newValue)) {
-                        $('#profile-update-message').html('<div class="alert alert-danger">Invalid card number.</div>');
-                        return;
-                    }
-                }
-
-                if (field === 'card_expiration') {
-                    const expirationRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
-                    if (!expirationRegex.test(newValue)) {
-                        $('#profile-update-message').html('<div class="alert alert-danger">Invalid expiration date. Use MM/YY format.</div>');
-                        return;
-                    }
-                }
-
-                $.ajax({
-                    url: '/api/profile/update',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(payload),
-                    success: function (response) {
-                        $('#profile-update-message').html('<div class="alert alert-success">Profile updated successfully!</div>');
-                        loadProfile();
-                    },
-                    error: function (xhr) {
-                        $('#profile-update-message').html('<div class="alert alert-danger">Failed to update profile.</div>');
-                        loadProfile();
-                    }
-                });
+                return sum % 10 === 0;
             }
-
-
-
-            loadProfile();
-            loadOrders();
 
             $(document).on('click', '.edit-btn', function () {
                 const field = $(this).data('field');
@@ -395,27 +434,11 @@
                 const field = $(this).data('field');
                 saveField(field);
             });
+
+            loadProfile();
+            loadOrders();
         });
-
-        function luhnCheck(cardNumber) {
-            let sum = 0;
-            let shouldDouble = false;
-            for (let i = cardNumber.length - 1; i >= 0; i--) {
-                let digit = parseInt(cardNumber.charAt(i));
-
-                if (shouldDouble) {
-                    digit *= 2;
-                    if (digit > 9) digit -= 9;
-                }
-
-                sum += digit;
-                shouldDouble = !shouldDouble;
-            }
-            return sum % 10 === 0;
-        }
-
     </script>
-
 </body>
 
 </html>
