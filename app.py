@@ -18,7 +18,6 @@ from datetime import datetime
 import uuid
 import base64
 import bcrypt
-from dotenv import load_dotenv
 from config import DB_PATH, EMAILS_DIR, CHALLENGE_DB_PATH
 from crypto_utils import hash_password, encrypt_card, decrypt_card
 
@@ -26,7 +25,6 @@ import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-load_dotenv()
 
 PASSWORD_PEPPER = os.getenv("PASSWORD_PEPPER")
 AES_KEY = os.getenv("AES_KEY").encode()
