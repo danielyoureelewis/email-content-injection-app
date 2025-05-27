@@ -317,6 +317,9 @@
             }
             console.log("Validation passed, proceeding to checkout...");
 
+            let subtotal = parseFloat(document.getElementById('subtotal').textContent.replace('$', '')) || 0;
+            let shipping = parseFloat(document.getElementById('shipping').textContent.replace('$', '')) || 0;
+            let total = subtotal + shipping; 
             let shippingAddress = document.getElementById('shipping-address').value;
             let billingAddress = document.getElementById('billing-address').value;
             let cardNumber = document.getElementById('card-number').value;
@@ -324,6 +327,9 @@
             let cvv = document.getElementById('cvv').value;
 
             let data = {
+                subtotal: subtotal,
+                shipping: shipping,
+                total: total,
                 shipping_address: shippingAddress,
                 billing_address: billingAddress,
                 card_number: cardNumber,

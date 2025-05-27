@@ -67,7 +67,7 @@ function handleRegistration(e) {
           //put signin-name in session storage
           document.getElementById('signin-password').value = document.getElementById('signup-password').value;
           $('[href="#signin"]').tab('show');
-        } else if (data.message.includes('already exists!')) {
+        } else if (data.message) {
           // Clear fields
           console.log('username already exists!');
           document.getElementById('signup-name').value = '';

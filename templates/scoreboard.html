@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Grimoire of Broken Seals</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    
+
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=UnifrakturCook&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=UnifrakturCook&display=swap"
+        rel="stylesheet">
 
     <!-- Styles -->
     <style>
+
+
         body {
             background-color: #0d0c0c;
             margin: 0;
@@ -24,7 +28,7 @@
             border-radius: 20px;
             padding: 40px;
             margin: 40px auto;
-            max-width: 900px;
+            max-width: 1080px;
             box-shadow: 0 0 30px rgba(127, 90, 240, 0.5);
             background-image: url('/static/tentacle_pattern.png');
             background-size: cover;
@@ -57,6 +61,7 @@
         }
 
         .challenge-entry {
+            
             font-size: 16px;
             margin-left: 15px;
             padding: 8px;
@@ -80,6 +85,26 @@
             color: #9ae69a;
             text-shadow: 0 0 4px #54ff54;
         }
+        .reset-button {
+    float: right;
+    background: linear-gradient(145deg, #7f5af0, #4d3ca2);
+    color: #eae7dc;
+    border: 1px solid #7f5af0;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(127, 90, 240, 0.6);
+    transition: all 0.2s ease-in-out;
+}
+
+.reset-button:hover {
+    background: #2c1e5a;
+    color: #ffffff;
+    box-shadow: 0 0 12px #7f5af0;
+}
+
     </style>
 </head>
 
@@ -102,32 +127,54 @@
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             })
-            .then(res => res.json())
-            .then(data => {
-                const board = document.getElementById('challenge-board');
-                board.innerHTML = '';
-                data.sort((a, b) => a.category.localeCompare(b.category));
-                data.forEach(group => {
-                    const section = document.createElement('div');
-                    section.className = 'challenge-section';
-                    section.innerHTML = `<h3>${group.category} (${group.solved}/${group.total})</h3>`;
+                .then(res => res.json())
+                .then(data => {
+                    const board = document.getElementById('challenge-board');
+                    board.innerHTML = '';
+                    data.sort((a, b) => a.category.localeCompare(b.category));
+                    data.forEach(group => {
+                        const section = document.createElement('div');
+                        section.className = 'challenge-section';
+                        section.innerHTML = `<h3>${group.category} (${group.solved}/${group.total})</h3>`;
 
-                    group.challenges.forEach(chal => {
-                        const row = document.createElement('div');
-                        row.className = 'challenge-entry';
-                        row.innerHTML = `
-                            <span class="status-icon">${chal.solved ? '✅' : '☐'}</span>
-                            <strong>${chal.name}</strong> – ${chal.description}
-                        `;
-                        section.appendChild(row);
+                        group.challenges.forEach(chal => {
+                            const row = document.createElement('div');
+                            row.className = 'challenge-entry';
+                            row.innerHTML = `
+                                <span class="status-icon">${chal.solved ? '✅' : '☐'}</span>
+                                <strong>${chal.name}</strong> – ${chal.description}
+                                <button class="reset-button" onclick="resetChallenge('${chal.id}')">Reset</button>
+                            `;
+                            section.appendChild(row);
+                        });
+
+
+                        board.appendChild(section);
                     });
-
-                    board.appendChild(section);
                 });
-            });
         }
 
         loadChallenges();
+
+        // Reset challenge function
+        function resetChallenge(challenge_id) {
+            fetch('/api/reset-challenge/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    player_id: player_id,
+                    challenge_id: challenge_id
+                })
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error("Failed to reset");
+                    return res.json();
+                })
+                .then(() => loadChallenges())
+                .catch(err => alert("Could not reset challenge: " + err.message));
+        }
+
     </script>
 </body>
+
 </html>

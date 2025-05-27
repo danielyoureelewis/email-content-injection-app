@@ -253,11 +253,21 @@
 
     <script>
         $(document).ready(function () {
+            // 🛡️ Escape HTML utility
+            function escapeHtml(unsafe) {
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+    
             function maskCardNumber(cardNumber) {
                 if (!cardNumber || cardNumber.length < 4) return cardNumber;
                 return '**** **** **** ' + cardNumber.toString().slice(-4);
             }
-
+    
             function resetFields() {
                 ['email', 'shipping_address', 'billing_address', 'card_number', 'card_expiration'].forEach(function (field) {
                     $(`#user-${field}-edit`).hide();
@@ -265,42 +275,44 @@
                     $(`button[data-field="${field}"].edit-btn`).show();
                 });
             }
-
+    
             function loadProfile() {
                 $.getJSON('/api/profile', function (data) {
                     $('#user-full-name').text('Welcome, ' + (data.username || 'User') + '!');
                     sessionStorage.setItem('username', data.username || '');
-
-                    $('#user-email-display').text(data.email || 'Not provided');
+    
+                    $('#user-email-display').html(escapeHtml(data.email || 'Not provided'));
                     $('#edit-email-input').val(data.email || '');
-
+    
                     $('#user-shipping_address-display').html(
-                        (data.shipping_address || 'Not provided').replace(/\n/g, '<br>')
+                        escapeHtml(data.shipping_address || 'Not provided').replace(/\n/g, '<br>')
                     );
                     $('#edit-shipping_address-input').val(data.shipping_address || '');
-
+    
                     $('#user-billing_address-display').html(
-                        (data.billing_address || 'Not provided').replace(/\n/g, '<br>')
+                        escapeHtml(data.billing_address || 'Not provided').replace(/\n/g, '<br>')
                     );
                     $('#edit-billing_address-input').val(data.billing_address || '');
-
-                    $('#user-card_number-display').text(
-                        data.card_number ? maskCardNumber(data.card_number) : 'Not provided'
+    
+                    $('#user-card_number-display').html(
+                        data.card_number ? escapeHtml(maskCardNumber(data.card_number)) : 'Not provided'
                     );
                     $('#edit-card_number-input').val(data.card_number || '');
-
-                    $('#user-card_expiration-display').text(data.card_expiration || 'Not provided');
+    
+                    $('#user-card_expiration-display').html(escapeHtml(data.card_expiration || 'Not provided'));
                     $('#edit-card_expiration-input').val(data.card_expiration || '');
-
+    
                     $('#profile-picture').attr('src', data.profile_picture || '/static/profile_pics/default.png');
-
-                    $('#loading-indicator').hide(); // make sure you have a #loading-indicator element to hide
-                    $('#profile-container').show(); // make sure profile content container is visible
-
+    
+                    $('#loading-indicator').hide();
+                    $('#profile-container').show();
+    
                     resetFields();
                 });
             }
-
+    
+            // (rest of the JS remains unchanged)
+    
             function loadOrders() {
                 $.getJSON('/api/orders', function (data) {
                     if (data.length === 0) {

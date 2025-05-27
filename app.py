@@ -18,7 +18,6 @@ from datetime import datetime
 import uuid
 import base64
 import bcrypt
-from dotenv import load_dotenv
 from config import DB_PATH, EMAILS_DIR, CHALLENGE_DB_PATH
 from crypto_utils import hash_password, encrypt_card, decrypt_card
 
@@ -26,7 +25,6 @@ import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-load_dotenv()
 
 PASSWORD_PEPPER = os.getenv("PASSWORD_PEPPER")
 AES_KEY = os.getenv("AES_KEY").encode()
@@ -268,8 +266,11 @@ def generateOTP() :
 def register():
     if request.method == "POST":
         data = request.get_json()
-
         username = data["username"]
+        # Check if username contains whitespace
+        for c in username:
+            if c.isspace():
+                return jsonify({"message": "Username cannot contain whitespace."}), 400
         email = data["email"]
         raw_password = data["password"]
         password = hash_password(raw_password)  # Securely hashed
@@ -818,7 +819,11 @@ def checkout():
     if not user_id:
         return jsonify({"error": "User not logged in."}), 401
 
+    
     data = request.get_json()
+    total = data.get('total')
+    subtotal = data.get('subtotal')
+    shipping_cost = data.get('shipping')
     shipping_address = data.get('shipping_address')
     billing_address = data.get('billing_address')
 
@@ -847,6 +852,19 @@ def checkout():
                 WHERE cart_items.cart_id = ?
             ''', (cart_id,))
             cart_items = cursor.fetchall()
+
+            st = 0
+            #check price matches request
+            for item in cart_items:
+                print(item['quantity'])
+                st = st + (item['price'] * item['quantity'])
+            
+            if st != subtotal:
+                return jsonify({"error": "Subtotal does not match cart items."}), 400
+
+            if total != (subtotal + shipping_cost):
+                return jsonify({"error": "Total does not match subtotal and shipping cost."}), 400
+            print('here')
             if not cart_items:
                 return jsonify({"error": "Your cart is empty."}), 400
 
@@ -874,6 +892,15 @@ def checkout():
             cursor.execute('DELETE FROM cart_items WHERE cart_id = ?', (cart_id,))
             conn.commit()
 
+            # Detect if shipping is negative
+            if shipping_cost < 0:
+                with sqlite3.connect(CHALLENGE_DB_PATH) as chal_conn:
+                    chal_cursor = chal_conn.cursor()
+                    chal_cursor.execute("SELECT solved FROM challenges WHERE uuid = 'd1f8c2b4-9ce3-49ae-a042-4b105e0a4cb0'")
+                    row = chal_cursor.fetchone()
+                    if row and not row[0]:
+                        chal_cursor.execute("UPDATE challenges SET solved = 1 WHERE uuid = 'd1f8c2b4-9ce3-49ae-a042-4b105e0a4cb0'")
+                        chal_conn.commit()
             return jsonify({"message": "Checkout successful!"})
 
     except Exception as e:
@@ -1128,14 +1155,15 @@ def email_profile():
             profile_pic_html = f.read()
     except Exception as e:
         profile_pic_html = f"<p>Could not load profile picture: {e}</p>"
-
+    template_path = os.path.join(os.path.dirname(__file__), 'email_templates', 'profile_email.html')
+    with open(template_path, 'r') as file:
+        body_template = file.read()
     # Render email with raw HTML injection
-    body = render_template(
-        "profile.html",
+    body = body_template.format(
         username=row["username"],
         email=row["email"],
         shipping_address=row["shipping_address"],
-        profile_picture_url=profile_pic_html  # 🚨 Injecting file contents directly
+        profile_picture_url=pic_path  # 🚨 Injecting file contents directly
     )
 
     # Save email to .eml using create_eml_file function
@@ -1162,7 +1190,7 @@ def get_challenges():
     for row in all_challenges:
         entry = {
             'id': row['id'],
-            'uuid': row['uuid'],
+            #'uuid': row['uuid'],
             'name': row['name'],
             'description': row['description'],
             'points': row['points'],
@@ -1243,7 +1271,21 @@ def solve_challenge_by_uuid(uuid):
     return jsonify({'success': True, 'message': 'Challenge marked as solved'})
 
 
+@app.route('/api/reset-challenge/', methods=['POST'])
+def reset_challenge():
+    data = request.get_json()
+    challenge_id = data.get('challenge_id')
+    with sqlite3.connect(CHALLENGE_DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, solved FROM challenges WHERE id = ?", (challenge_id,))
+        row = cursor.fetchone()
 
+        if not row:
+            return jsonify({'success': False, 'message': 'Challenge not found'}), 404
+
+        cursor.execute("UPDATE challenges SET solved = 0 WHERE id = ?", (challenge_id,))
+        conn.commit()
+        return jsonify({'success': True, 'message': 'Challenge marked as unsolved'})
 
 
 if __name__ == "__main__":
