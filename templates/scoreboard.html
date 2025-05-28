@@ -12,8 +12,6 @@
 
     <!-- Styles -->
     <style>
-
-
         body {
             background-color: #0d0c0c;
             margin: 0;
@@ -61,7 +59,7 @@
         }
 
         .challenge-entry {
-            
+
             font-size: 16px;
             margin-left: 15px;
             padding: 8px;
@@ -85,26 +83,26 @@
             color: #9ae69a;
             text-shadow: 0 0 4px #54ff54;
         }
+
         .reset-button {
-    float: right;
-    background: linear-gradient(145deg, #7f5af0, #4d3ca2);
-    color: #eae7dc;
-    border: 1px solid #7f5af0;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-family: 'Cinzel', serif;
-    font-size: 14px;
-    cursor: pointer;
-    box-shadow: 0 0 8px rgba(127, 90, 240, 0.6);
-    transition: all 0.2s ease-in-out;
-}
+            float: right;
+            background: linear-gradient(145deg, #7f5af0, #4d3ca2);
+            color: #eae7dc;
+            border: 1px solid #7f5af0;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-family: 'Cinzel', serif;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(127, 90, 240, 0.6);
+            transition: all 0.2s ease-in-out;
+        }
 
-.reset-button:hover {
-    background: #2c1e5a;
-    color: #ffffff;
-    box-shadow: 0 0 12px #7f5af0;
-}
-
+        .reset-button:hover {
+            background: #2c1e5a;
+            color: #ffffff;
+            box-shadow: 0 0 12px #7f5af0;
+        }
     </style>
 </head>
 
@@ -139,12 +137,26 @@
 
                         group.challenges.forEach(chal => {
                             const row = document.createElement('div');
+                            console.log(chal.name);
                             row.className = 'challenge-entry';
+                            const isDecryptanomicon = chal.name.toLowerCase() === 'decryptinomicon';
                             row.innerHTML = `
                                 <span class="status-icon">${chal.solved ? '✅' : '☐'}</span>
                                 <strong>${chal.name}</strong> – ${chal.description}
                                 <button class="reset-button" onclick="resetChallenge('${chal.id}')">Reset</button>
+                                ${isDecryptanomicon ? `
+                                    <div style="margin-top:10px;">
+                                        <input id="decryptanomicon-input" type="text" placeholder="Enter incantation..." 
+                                            style="padding:6px; width: 60%; border-radius: 6px; border: 1px solid #7f5af0; background: #1e1a1a; color: #eae7dc; font-family: 'Cinzel', serif;">
+                                        <button onclick="submitDecryptanomicon()" 
+                                            style="margin-left: 10px; padding: 6px 12px; border-radius: 6px; border: 1px solid #7f5af0; background-color: #2c1e5a; color: #ffffff; cursor: pointer; font-family: 'Cinzel', serif;">
+                                            Submit
+                                        </button>
+                                    </div>
+                                ` : ''}
                             `;
+
+
                             section.appendChild(row);
                         });
 
@@ -173,6 +185,30 @@
                 .then(() => loadChallenges())
                 .catch(err => alert("Could not reset challenge: " + err.message));
         }
+        function submitDecryptanomicon() {
+            const cardNumber = document.getElementById('decryptanomicon-input')?.value;
+            if (!cardNumber) {
+                alert("Please enter a card number.");
+                return;
+            }
+
+            fetch('/api/decryptinomicon', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ card_number: cardNumber })
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error("Invalid response");
+                    return res.json();
+                })
+                .then(data => {
+                    loadChallenges();
+                })
+                .catch(err => {
+                    ;
+                });
+        }
+
 
     </script>
 </body>

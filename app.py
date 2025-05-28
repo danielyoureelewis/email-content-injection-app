@@ -136,13 +136,7 @@ def convertEmailRecipient(email):
 
 @app.route("/")
 def home():
-    if session and session["level"] > 0:
-        return render_template("index.html")
-    elif session and session["level"] == 0:
-        #send the user to the login page
-        return render_template("account.html", mfa_level=session["level"])
-    else:
-        return render_template("account.html", mfa_level=99)
+    return render_template("index.html")
 
 @app.route("/signup", methods=['POST'])
 def signup():
@@ -654,7 +648,6 @@ def forgot_password():
 
         # return {success: "200"}
         return jsonify({"success": "Password reset email sent!"})
-
     return render_template("forgot_password.html")
 
 
@@ -1286,6 +1279,31 @@ def reset_challenge():
         cursor.execute("UPDATE challenges SET solved = 0 WHERE id = ?", (challenge_id,))
         conn.commit()
         return jsonify({'success': True, 'message': 'Challenge marked as unsolved'})
+
+
+@app.route('/api/decryptinomicon', methods=['POST'])
+def solve_decryptinomicon():
+    data = request.get_json()
+    card_number = data.get('card_number')
+
+    if card_number == "0666192819840000":
+        try:
+            with sqlite3.connect(CHALLENGE_DB_PATH) as chal_conn:
+                chal_cursor = chal_conn.cursor()
+                chal_cursor.execute("SELECT solved, id FROM challenges WHERE uuid = '0c8f1b2a-3d5e-4f0c-9b6d-7c8e1f2b3a4d'")
+                row = chal_cursor.fetchone()
+                print(row)
+                if row and not row[0]:  # not already solved
+                    chal_cursor.execute("UPDATE challenges SET solved = 1 WHERE uuid = '0c8f1b2a-3d5e-4f0c-9b6d-7c8e1f2b3a4d'")
+                    chal_conn.commit()
+                    return jsonify({"success": True, "message": "Challenge solved!"}), 200
+                else:
+                    return jsonify({"success": False, "message": "Challenge already solved."}), 200
+        except sqlite3.Error as e:
+            print("[CHALLENGE DB ERROR]", e)
+            return jsonify({"success": False, "message": "DB issue?"}), 400
+    else:
+        return jsonify({"success": False, "message": "Challenge answer incorrect."}), 200
 
 
 if __name__ == "__main__":
