@@ -1,2 +1,78 @@
-.DS_Store
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Flask / Gunicorn / Debug-related
+instance/
 *.db
+*.sqlite
+*.sqlite3
+*.log
+*.pid
+
+# MacOS system files
+.DS_Store
+
+# VS Code
+.vscode/
+
+# JetBrains IDEs
+.idea/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Python egg metadata
+*.egg-info/
+.eggs/
+
+# Build artifacts
+build/
+dist/
+*.egg
+
+# Node.js dependencies (if using frontend tooling)
+node_modules/
+
+# Static assets cache (if built)
+static/build/
+*.lock
+
+# Local secrets or override files
+.env.local
+.env.*.local
+secrets.json
+config.yaml
