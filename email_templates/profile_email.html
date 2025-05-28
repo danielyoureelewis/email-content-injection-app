@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Your Tentacle and Throw Profile</title>
+    <style>
+        body {{
+            font-family: "Roboto", sans-serif;
+            background-color: #f5f5f0;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }}
+
+        .email-container {{
+            max-width: 600px;
+            margin: auto;
+            background-color: #ffffff;
+            border: 2px solid #5A4AB0;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 0 15px rgba(90, 74, 176, 0.3);
+        }}
+
+        .email-container h2 {{
+            color: #5A4AB0;
+            margin-bottom: 20px;
+        }}
+
+        .email-container p {{
+            margin: 10px 0;
+        }}
+
+        .footer {{
+            font-size: 12px;
+            color: #999;
+            margin-top: 30px;
+            text-align: center;
+        }}
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <h2>Your Tentacle and Throw Profile</h2>
+        <p><strong>Username:</strong> {username}</p>
+        <p><strong>Email:</strong> {email}</p>
+        
+        <p><strong>Shipping Address:</strong> {shipping_address}</p>
+        <hr style="margin: 25px 0;">
+
+        <p><strong>Profile Picture:</strong></p>
+        <div>
+            <img src="{profile_picture_url}" alt="Profile Picture" style="max-width: 200px;">
+        </div>
+
+        <div class="footer">
+            Summoned by Tentacle and Throw • Beware the Deep Ones
+        </div>
+    </div>
+</body>
+</html>
